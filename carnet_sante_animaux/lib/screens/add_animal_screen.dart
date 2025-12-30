@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/animal.dart';
 import '../services/animal_service.dart';
 
@@ -15,6 +17,7 @@ class AddAnimalScreen extends StatefulWidget {
 class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final _formKey = GlobalKey<FormState>();
   final AnimalService _animalService = AnimalService();
+  final ImagePicker _picker = ImagePicker();
 
   late TextEditingController _nomController;
   late TextEditingController _especeController;
@@ -25,6 +28,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
 
   DateTime? _dateNaissance;
   String? _sexe;
+  String? _photoPath;
 
   final List<String> _especesSuggestions = [
     'Chien',
@@ -51,6 +55,62 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     _notesController = TextEditingController(text: widget.animal?.notes ?? '');
     _dateNaissance = widget.animal?.dateNaissance;
     _sexe = widget.animal?.sexe;
+    _photoPath = widget.animal?.photoPath;
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      if (image != null) {
+        setState(() {
+          _photoPath = image.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la sélection de l\'image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choisir une photo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Prendre une photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choisir depuis la galerie'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -78,6 +138,44 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            Center(
+              child: GestureDetector(
+                onTap: _showImageSourceDialog,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      backgroundImage: _photoPath != null
+                          ? FileImage(File(_photoPath!))
+                          : null,
+                      child: _photoPath == null
+                          ? Icon(
+                              Icons.pets,
+                              size: 60,
+                              color: Theme.of(context).colorScheme.primary,
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             TextFormField(
               controller: _nomController,
               decoration: const InputDecoration(
@@ -261,6 +359,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         numeroIdentification: _numeroIdController.text.isEmpty
             ? null
             : _numeroIdController.text,
+        photoPath: _photoPath,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
         traitements: widget.animal?.traitements ?? [],
         vaccins: widget.animal?.vaccins ?? [],

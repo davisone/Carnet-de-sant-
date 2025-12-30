@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/animal.dart';
@@ -41,10 +42,12 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: _selectedIndex == 0
-          ? _buildTousLesAnimaux()
+          ? _buildDashboard()
           : _selectedIndex == 1
-              ? _buildTraitementsEnCours()
-              : _buildVaccinsAVenir(),
+              ? _buildTousLesAnimaux()
+              : _selectedIndex == 2
+                  ? _buildTraitementsEnCours()
+                  : _buildVaccinsAVenir(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -52,8 +55,12 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         destinations: const [
           NavigationDestination(
+            icon: Icon(Icons.dashboard),
+            label: 'Accueil',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.pets),
-            label: 'Tous',
+            label: 'Animaux',
           ),
           NavigationDestination(
             icon: Icon(Icons.medication),
@@ -77,6 +84,251 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         icon: const Icon(Icons.add),
         label: const Text('Ajouter un animal'),
+      ),
+    );
+  }
+
+  Widget _buildDashboard() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final animauxEnTraitement = _animaux.where((a) => a.traitementsEnCours.isNotEmpty).toList();
+    final animauxAvecVaccin = _animaux.where((a) => a.prochainVaccin != null).toList();
+    final vaccinsUrgents = animauxAvecVaccin.where((a) {
+      final jours = a.prochainVaccin!.dateRappel!.difference(DateTime.now()).inDays;
+      return jours <= 7;
+    }).toList();
+
+    return RefreshIndicator(
+      onRefresh: _loadAnimaux,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            'Bienvenue !',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Vue d\'ensemble de vos animaux',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  title: 'Animaux',
+                  value: '${_animaux.length}',
+                  icon: Icons.pets,
+                  color: Colors.teal,
+                  onTap: () => setState(() => _selectedIndex = 1),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  title: 'En traitement',
+                  value: '${animauxEnTraitement.length}',
+                  icon: Icons.medication,
+                  color: Colors.orange,
+                  onTap: () => setState(() => _selectedIndex = 2),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  title: 'Vaccins à venir',
+                  value: '${animauxAvecVaccin.length}',
+                  icon: Icons.vaccines,
+                  color: Colors.blue,
+                  onTap: () => setState(() => _selectedIndex = 3),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  title: 'Vaccins urgents',
+                  value: '${vaccinsUrgents.length}',
+                  icon: Icons.warning,
+                  color: Colors.red,
+                  onTap: () => setState(() => _selectedIndex = 3),
+                ),
+              ),
+            ],
+          ),
+          if (vaccinsUrgents.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Vaccins urgents',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            ...vaccinsUrgents.map((animal) {
+              final vaccin = animal.prochainVaccin!;
+              final jours = vaccin.dateRappel!.difference(DateTime.now()).inDays;
+              return Card(
+                color: Colors.red[50],
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.red,
+                    child: const Icon(Icons.warning, color: Colors.white),
+                  ),
+                  title: Text(animal.nom),
+                  subtitle: Text(
+                    '${vaccin.nom} - ${jours == 0 ? 'Aujourd\'hui' : 'Dans $jours jour${jours > 1 ? 's' : ''}'}',
+                  ),
+                  trailing: const Icon(Icons.arrow_forward),
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AnimalDetailScreen(animal: animal),
+                      ),
+                    );
+                    _loadAnimaux();
+                  },
+                ),
+              );
+            }).toList(),
+          ],
+          if (animauxEnTraitement.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Animaux en traitement',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            ...animauxEnTraitement.take(3).map((animal) {
+              return Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    backgroundImage: animal.photoPath != null
+                        ? FileImage(File(animal.photoPath!))
+                        : null,
+                    child: animal.photoPath == null
+                        ? Icon(
+                            _getAnimalIcon(animal.espece),
+                            color: Theme.of(context).colorScheme.primary,
+                          )
+                        : null,
+                  ),
+                  title: Text(animal.nom),
+                  subtitle: Text(
+                    '${animal.traitementsEnCours.length} traitement${animal.traitementsEnCours.length > 1 ? 's' : ''} en cours',
+                  ),
+                  trailing: const Icon(Icons.arrow_forward),
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AnimalDetailScreen(animal: animal),
+                      ),
+                    );
+                    _loadAnimaux();
+                  },
+                ),
+              );
+            }).toList(),
+            if (animauxEnTraitement.length > 3)
+              TextButton(
+                onPressed: () => setState(() => _selectedIndex = 2),
+                child: Text('Voir tous les traitements (${animauxEnTraitement.length})'),
+              ),
+          ],
+          if (_animaux.isEmpty) ...[
+            const SizedBox(height: 60),
+            Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.pets,
+                    size: 100,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Aucun animal enregistré',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Appuyez sur + pour ajouter votre premier animal',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(icon, color: color, size: 32),
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[700],
+                    ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -156,11 +408,16 @@ class _HomeScreenState extends State<HomeScreen> {
               CircleAvatar(
                 radius: 30,
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Icon(
-                  _getAnimalIcon(animal.espece),
-                  size: 32,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                backgroundImage: animal.photoPath != null
+                    ? FileImage(File(animal.photoPath!))
+                    : null,
+                child: animal.photoPath == null
+                    ? Icon(
+                        _getAnimalIcon(animal.espece),
+                        size: 32,
+                        color: Theme.of(context).colorScheme.primary,
+                      )
+                    : null,
               ),
               const SizedBox(width: 12),
               Expanded(

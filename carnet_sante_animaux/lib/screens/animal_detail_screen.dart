@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -103,11 +104,16 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
                     radius: 50,
                     backgroundColor:
                         Theme.of(context).colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.pets,
-                      size: 60,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                    backgroundImage: _animal.photoPath != null
+                        ? FileImage(File(_animal.photoPath!))
+                        : null,
+                    child: _animal.photoPath == null
+                        ? Icon(
+                            Icons.pets,
+                            size: 60,
+                            color: Theme.of(context).colorScheme.primary,
+                          )
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 24),
