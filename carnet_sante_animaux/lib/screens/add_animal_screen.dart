@@ -29,6 +29,9 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   DateTime? _dateNaissance;
   String? _sexe;
   String? _photoPath;
+  String? _pereId;
+  String? _mereId;
+  List<Animal> _animaux = [];
 
   final List<String> _especesSuggestions = [
     'Chien',
@@ -56,6 +59,16 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     _dateNaissance = widget.animal?.dateNaissance;
     _sexe = widget.animal?.sexe;
     _photoPath = widget.animal?.photoPath;
+    _pereId = widget.animal?.pereId;
+    _mereId = widget.animal?.mereId;
+    _loadAnimaux();
+  }
+
+  Future<void> _loadAnimaux() async {
+    final animaux = await _animalService.getAnimaux();
+    setState(() {
+      _animaux = animaux;
+    });
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -290,6 +303,60 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               },
             ),
             const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _pereId,
+              decoration: const InputDecoration(
+                labelText: 'Père',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.male),
+                hintText: 'Sélectionner le père (optionnel)',
+              ),
+              items: [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('Aucun'),
+                ),
+                ..._animaux
+                    .where((a) =>
+                        a.sexe == 'Mâle' &&
+                        a.id != widget.animal?.id)
+                    .map((a) => DropdownMenuItem(
+                          value: a.id,
+                          child: Text('${a.nom} (${a.race})'),
+                        )),
+              ],
+              onChanged: (value) {
+                setState(() => _pereId = value);
+              },
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _mereId,
+              decoration: const InputDecoration(
+                labelText: 'Mère',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.female),
+                hintText: 'Sélectionner la mère (optionnel)',
+              ),
+              items: [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('Aucun'),
+                ),
+                ..._animaux
+                    .where((a) =>
+                        a.sexe == 'Femelle' &&
+                        a.id != widget.animal?.id)
+                    .map((a) => DropdownMenuItem(
+                          value: a.id,
+                          child: Text('${a.nom} (${a.race})'),
+                        )),
+              ],
+              onChanged: (value) {
+                setState(() => _mereId = value);
+              },
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _couleurController,
               decoration: const InputDecoration(
@@ -360,6 +427,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             ? null
             : _numeroIdController.text,
         photoPath: _photoPath,
+        pereId: _pereId,
+        mereId: _mereId,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
         traitements: widget.animal?.traitements ?? [],
         vaccins: widget.animal?.vaccins ?? [],

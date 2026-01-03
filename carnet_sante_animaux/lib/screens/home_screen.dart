@@ -5,6 +5,7 @@ import '../models/animal.dart';
 import '../services/animal_service.dart';
 import 'animal_detail_screen.dart';
 import 'add_animal_screen.dart';
+import 'family_tree_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,6 +41,21 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Carnet de Santé Animaux'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_tree),
+            tooltip: 'Arbre généalogique',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FamilyTreeScreen(),
+                ),
+              );
+              _loadAnimaux();
+            },
+          ),
+        ],
       ),
       body: _selectedIndex == 0
           ? _buildDashboard()

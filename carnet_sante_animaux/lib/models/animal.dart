@@ -8,6 +8,8 @@ class Animal {
   final String? couleur;
   final String? numeroIdentification; // puce ou tatouage
   final String? photoPath;
+  final String? pereId; // ID du père
+  final String? mereId; // ID de la mère
   final List<Traitement> traitements;
   final List<Vaccin> vaccins;
   final List<ConsultationVeterinaire> consultations;
@@ -23,6 +25,8 @@ class Animal {
     this.couleur,
     this.numeroIdentification,
     this.photoPath,
+    this.pereId,
+    this.mereId,
     this.traitements = const [],
     this.vaccins = const [],
     this.consultations = const [],
@@ -71,6 +75,8 @@ class Animal {
       'couleur': couleur,
       'numeroIdentification': numeroIdentification,
       'photoPath': photoPath,
+      'pereId': pereId,
+      'mereId': mereId,
       'traitements': traitements.map((t) => t.toJson()).toList(),
       'vaccins': vaccins.map((v) => v.toJson()).toList(),
       'consultations': consultations.map((c) => c.toJson()).toList(),
@@ -89,6 +95,8 @@ class Animal {
       couleur: json['couleur'],
       numeroIdentification: json['numeroIdentification'],
       photoPath: json['photoPath'],
+      pereId: json['pereId'],
+      mereId: json['mereId'],
       traitements: (json['traitements'] as List?)
               ?.map((t) => Traitement.fromJson(t))
               .toList() ??
@@ -115,6 +123,8 @@ class Animal {
     String? couleur,
     String? numeroIdentification,
     String? photoPath,
+    String? pereId,
+    String? mereId,
     List<Traitement>? traitements,
     List<Vaccin>? vaccins,
     List<ConsultationVeterinaire>? consultations,
@@ -130,6 +140,8 @@ class Animal {
       couleur: couleur ?? this.couleur,
       numeroIdentification: numeroIdentification ?? this.numeroIdentification,
       photoPath: photoPath ?? this.photoPath,
+      pereId: pereId ?? this.pereId,
+      mereId: mereId ?? this.mereId,
       traitements: traitements ?? this.traitements,
       vaccins: vaccins ?? this.vaccins,
       consultations: consultations ?? this.consultations,
