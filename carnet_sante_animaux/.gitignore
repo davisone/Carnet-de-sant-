@@ -43,3 +43,37 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase
+# IMPORTANT: Ne pas committer google-services.json en production avec des vraies clés
+# Pour le développement, vous pouvez le committer, mais pas pour la production
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+ios/firebase_app_id_file.json
+lib/firebase_options.dart
+
+# Clés et secrets
+*.env
+.env*
+secrets/
+*.key
+*.keystore
+*.jks
+
+# Fichiers générés par Flutter
+*.freezed.dart
+*.g.dart
+*.gen.dart
+
+# Base de données locale (si vous utilisez SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Fichiers de logs
+logs/
+*.log
+
+# Fichiers temporaires
+tmp/
+temp/

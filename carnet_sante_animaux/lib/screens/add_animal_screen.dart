@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/animal.dart';
-import '../services/animal_service.dart';
+import '../services/firebase_animal_service.dart';
 
 class AddAnimalScreen extends StatefulWidget {
   final Animal? animal;
@@ -16,7 +16,7 @@ class AddAnimalScreen extends StatefulWidget {
 
 class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final _formKey = GlobalKey<FormState>();
-  final AnimalService _animalService = AnimalService();
+  final FirebaseAnimalService _animalService = FirebaseAnimalService();
   final ImagePicker _picker = ImagePicker();
 
   late TextEditingController _nomController;

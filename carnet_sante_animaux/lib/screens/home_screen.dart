@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/animal.dart';
-import '../services/animal_service.dart';
+import '../services/firebase_animal_service.dart';
 import 'animal_detail_screen.dart';
 import 'add_animal_screen.dart';
 import 'family_tree_screen.dart';
@@ -15,7 +15,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final AnimalService _animalService = AnimalService();
+  final FirebaseAnimalService _animalService = FirebaseAnimalService();
   List<Animal> _animaux = [];
   bool _isLoading = true;
   int _selectedIndex = 0;

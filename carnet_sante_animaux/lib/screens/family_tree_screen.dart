@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/animal.dart';
-import '../services/animal_service.dart';
+import '../services/firebase_animal_service.dart';
 import 'animal_detail_screen.dart';
 
 class FamilyTreeScreen extends StatefulWidget {
@@ -14,7 +14,7 @@ class FamilyTreeScreen extends StatefulWidget {
 }
 
 class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
-  final AnimalService _animalService = AnimalService();
+  final FirebaseAnimalService _animalService = FirebaseAnimalService();
   Animal? _selectedAnimal;
   Animal? _pere;
   Animal? _mere;
