@@ -20,7 +20,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final ImagePicker _picker = ImagePicker();
 
   late TextEditingController _nomController;
-  late TextEditingController _especeController;
   late TextEditingController _raceController;
   late TextEditingController _couleurController;
   late TextEditingController _numeroIdController;
@@ -28,28 +27,24 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
 
   DateTime? _dateNaissance;
   String? _sexe;
+  String? _espece;
   String? _photoPath;
   String? _pereId;
   String? _mereId;
   List<Animal> _animaux = [];
 
   final List<String> _especesSuggestions = [
+    'Chèvre',
+    'Mouton',
+    'Cheval',
     'Chien',
     'Chat',
-    'Lapin',
-    'Oiseau',
-    'Hamster',
-    'Cochon d\'Inde',
-    'Cheval',
-    'Tortue',
   ];
 
   @override
   void initState() {
     super.initState();
     _nomController = TextEditingController(text: widget.animal?.nom ?? '');
-    _especeController =
-        TextEditingController(text: widget.animal?.espece ?? '');
     _raceController = TextEditingController(text: widget.animal?.race ?? '');
     _couleurController =
         TextEditingController(text: widget.animal?.couleur ?? '');
@@ -58,6 +53,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     _notesController = TextEditingController(text: widget.animal?.notes ?? '');
     _dateNaissance = widget.animal?.dateNaissance;
     _sexe = widget.animal?.sexe;
+    _espece = widget.animal?.espece;
     _photoPath = widget.animal?.photoPath;
     _pereId = widget.animal?.pereId;
     _mereId = widget.animal?.mereId;
@@ -129,7 +125,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   @override
   void dispose() {
     _nomController.dispose();
-    _especeController.dispose();
     _raceController.dispose();
     _couleurController.dispose();
     _numeroIdController.dispose();
@@ -204,42 +199,27 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               },
             ),
             const SizedBox(height: 16),
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text.isEmpty) {
-                  return _especesSuggestions;
-                }
-                return _especesSuggestions.where((String option) {
-                  return option
-                      .toLowerCase()
-                      .contains(textEditingValue.text.toLowerCase());
-                });
-              },
-              onSelected: (String selection) {
-                _especeController.text = selection;
-              },
-              fieldViewBuilder: (BuildContext context,
-                  TextEditingController fieldTextEditingController,
-                  FocusNode fieldFocusNode,
-                  VoidCallback onFieldSubmitted) {
-                return TextFormField(
-                  controller: fieldTextEditingController,
-                  focusNode: fieldFocusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Espèce',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.category),
-                  ),
-                  onChanged: (value) {
-                    _especeController.text = value;
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer une espèce';
-                    }
-                    return null;
-                  },
+            DropdownButtonFormField<String>(
+              value: _espece,
+              decoration: const InputDecoration(
+                labelText: 'Espèce',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.category),
+              ),
+              items: _especesSuggestions.map((String espece) {
+                return DropdownMenuItem<String>(
+                  value: espece,
+                  child: Text(espece),
                 );
+              }).toList(),
+              onChanged: (value) {
+                setState(() => _espece = value);
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Veuillez sélectionner une espèce';
+                }
+                return null;
               },
             ),
             const SizedBox(height: 16),
@@ -416,7 +396,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       final animal = Animal(
         id: widget.animal?.id ?? const Uuid().v4(),
         nom: _nomController.text,
-        espece: _especeController.text,
+        espece: _espece!,
         race: _raceController.text,
         dateNaissance: _dateNaissance!,
         sexe: _sexe,

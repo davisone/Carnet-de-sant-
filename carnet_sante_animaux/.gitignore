@@ -59,6 +59,7 @@ secrets/
 *.key
 *.keystore
 *.jks
+android/key.properties
 
 # Fichiers générés par Flutter
 *.freezed.dart
