@@ -16,9 +16,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final FirebaseAnimalService _animalService = FirebaseAnimalService();
+  final TextEditingController _searchController = TextEditingController();
   List<Animal> _animaux = [];
   bool _isLoading = true;
   int _selectedIndex = 0;
+  String _filtreEspece = 'Tous';
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -33,6 +36,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _animaux = animaux;
       _isLoading = false;
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -385,16 +394,126 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadAnimaux,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(8),
-        itemCount: _animaux.length,
-        itemBuilder: (context, index) {
-          final animal = _animaux[index];
-          return _buildAnimalCard(animal);
-        },
-      ),
+    // Filtrer les animaux selon l'espèce sélectionnée et la recherche
+    var animauxFiltres = _filtreEspece == 'Tous'
+        ? _animaux
+        : _animaux.where((a) => a.espece == _filtreEspece).toList();
+
+    // Filtrer par recherche
+    if (_searchQuery.isNotEmpty) {
+      animauxFiltres = animauxFiltres.where((a) =>
+        a.nom.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        a.race.toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
+    }
+
+    // Récupérer toutes les espèces uniques
+    final especesUniques = ['Tous', ..._animaux.map((a) => a.espece).toSet().toList()..sort()];
+
+    return Column(
+      children: [
+        // Barre de recherche
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Rechercher par nom ou race...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.grey[100],
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+        ),
+        // Barre de filtres
+        Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            itemCount: especesUniques.length,
+            itemBuilder: (context, index) {
+              final espece = especesUniques[index];
+              final isSelected = _filtreEspece == espece;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: FilterChip(
+                  label: Text(espece),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _filtreEspece = espece;
+                    });
+                  },
+                  backgroundColor: Colors.grey[200],
+                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                  labelStyle: TextStyle(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey[700],
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Liste des animaux filtrés
+        Expanded(
+          child: animauxFiltres.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 80,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Aucun animal de type "$_filtreEspece"',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadAnimaux,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: animauxFiltres.length,
+                    itemBuilder: (context, index) {
+                      final animal = animauxFiltres[index];
+                      return _buildAnimalCard(animal);
+                    },
+                  ),
+                ),
+        ),
+      ],
     );
   }
 
