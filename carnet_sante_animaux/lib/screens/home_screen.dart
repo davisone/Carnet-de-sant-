@@ -649,8 +649,90 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // Filtrer les animaux selon l'espèce sélectionnée et la recherche
+    var animauxFiltres = _filtreEspece == 'Tous'
+        ? _animaux
+        : _animaux.where((a) => a.espece == _filtreEspece).toList();
+
+    // Filtrer par recherche
+    if (_searchQuery.isNotEmpty) {
+      animauxFiltres = animauxFiltres.where((a) =>
+        a.nom.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        a.race.toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
+    }
+
+    // Récupérer toutes les espèces uniques
+    final especesUniques = ['Tous', ..._animaux.map((a) => a.espece).toSet().toList()..sort()];
+
     return Column(
       children: [
+        // Barre de recherche
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Rechercher par nom ou race...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.grey[100],
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+        ),
+        // Barre de filtres
+        Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            itemCount: especesUniques.length,
+            itemBuilder: (context, index) {
+              final espece = especesUniques[index];
+              final isSelected = _filtreEspece == espece;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: FilterChip(
+                  label: Text(espece),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _filtreEspece = espece;
+                    });
+                  },
+                  backgroundColor: Colors.grey[200],
+                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                  labelStyle: TextStyle(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey[700],
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
         if (_selectionMode)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -665,20 +747,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextButton.icon(
                   onPressed: () {
                     setState(() {
-                      if (_selectedAnimaux.length == _animaux.length) {
+                      if (_selectedAnimaux.length == animauxFiltres.length) {
                         _selectedAnimaux.clear();
                       } else {
-                        _selectedAnimaux = _animaux.map((a) => a.id).toSet();
+                        _selectedAnimaux = animauxFiltres.map((a) => a.id).toSet();
                       }
                     });
                   },
                   icon: Icon(
-                    _selectedAnimaux.length == _animaux.length
+                    _selectedAnimaux.length == animauxFiltres.length
                         ? Icons.deselect
                         : Icons.select_all,
                   ),
                   label: Text(
-                    _selectedAnimaux.length == _animaux.length
+                    _selectedAnimaux.length == animauxFiltres.length
                         ? 'Tout désélectionner'
                         : 'Tout sélectionner',
                   ),
@@ -696,95 +778,116 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: _loadAnimaux,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: _animaux.length,
-              itemBuilder: (context, index) {
-                final animal = _animaux[index];
-                final nbTraitements = animal.traitements.length;
-                final nbTraitementsEnCours = animal.traitementsEnCours.length;
-                final isSelected = _selectedAnimaux.contains(animal.id);
+          child: animauxFiltres.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 80,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Aucun résultat',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadAnimaux,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: animauxFiltres.length,
+                    itemBuilder: (context, index) {
+                      final animal = animauxFiltres[index];
+                      final nbTraitements = animal.traitements.length;
+                      final nbTraitementsEnCours = animal.traitementsEnCours.length;
+                      final isSelected = _selectedAnimaux.contains(animal.id);
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
-                  child: ListTile(
-                    leading: _selectionMode
-                        ? Checkbox(
-                            value: isSelected,
-                            onChanged: (value) {
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
+                        child: ListTile(
+                          leading: _selectionMode
+                              ? Checkbox(
+                                  value: isSelected,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      if (value == true) {
+                                        _selectedAnimaux.add(animal.id);
+                                      } else {
+                                        _selectedAnimaux.remove(animal.id);
+                                      }
+                                    });
+                                  },
+                                )
+                              : CircleAvatar(
+                                  radius: 25,
+                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  backgroundImage: animal.photoPath != null
+                                      ? FileImage(File(animal.photoPath!))
+                                      : null,
+                                  child: animal.photoPath == null
+                                      ? Icon(
+                                          _getAnimalIcon(animal.espece),
+                                          size: 28,
+                                          color: Theme.of(context).colorScheme.primary,
+                                        )
+                                      : null,
+                                ),
+                          title: Text(
+                            animal.nom,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            nbTraitements == 0
+                                ? 'Aucun traitement'
+                                : '$nbTraitements traitement${nbTraitements > 1 ? 's' : ''}'
+                                '${nbTraitementsEnCours > 0 ? ' ($nbTraitementsEnCours en cours)' : ''}',
+                            style: TextStyle(
+                              color: nbTraitementsEnCours > 0 ? Colors.orange[700] : Colors.grey[600],
+                            ),
+                          ),
+                          trailing: _selectionMode ? null : const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            if (_selectionMode) {
                               setState(() {
-                                if (value == true) {
-                                  _selectedAnimaux.add(animal.id);
-                                } else {
+                                if (isSelected) {
                                   _selectedAnimaux.remove(animal.id);
+                                } else {
+                                  _selectedAnimaux.add(animal.id);
                                 }
                               });
-                            },
-                          )
-                        : CircleAvatar(
-                            radius: 25,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            backgroundImage: animal.photoPath != null
-                                ? FileImage(File(animal.photoPath!))
-                                : null,
-                            child: animal.photoPath == null
-                                ? Icon(
-                                    _getAnimalIcon(animal.espece),
-                                    size: 28,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  )
-                                : null,
-                          ),
-                    title: Text(
-                      animal.nom,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: Text(
-                      nbTraitements == 0
-                          ? 'Aucun traitement'
-                          : '$nbTraitements traitement${nbTraitements > 1 ? 's' : ''}'
-                          '${nbTraitementsEnCours > 0 ? ' ($nbTraitementsEnCours en cours)' : ''}',
-                      style: TextStyle(
-                        color: nbTraitementsEnCours > 0 ? Colors.orange[700] : Colors.grey[600],
-                      ),
-                    ),
-                    trailing: _selectionMode ? null : const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      if (_selectionMode) {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedAnimaux.remove(animal.id);
-                          } else {
-                            _selectedAnimaux.add(animal.id);
-                          }
-                        });
-                      } else {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AnimalTraitementsScreen(animal: animal),
-                          ),
-                        );
-                        _loadAnimaux();
-                      }
-                    },
-                    onLongPress: () {
-                      setState(() {
-                        _selectionMode = true;
-                        _selectedAnimaux.add(animal.id);
-                      });
+                            } else {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AnimalTraitementsScreen(animal: animal),
+                                ),
+                              );
+                              _loadAnimaux();
+                            }
+                          },
+                          onLongPress: () {
+                            setState(() {
+                              _selectionMode = true;
+                              _selectedAnimaux.add(animal.id);
+                            });
+                          },
+                        ),
+                      );
                     },
                   ),
-                );
-              },
-            ),
-          ),
+                ),
         ),
       ],
     );
@@ -818,8 +921,90 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // Filtrer les animaux selon l'espèce sélectionnée et la recherche
+    var animauxFiltres = _filtreEspece == 'Tous'
+        ? _animaux
+        : _animaux.where((a) => a.espece == _filtreEspece).toList();
+
+    // Filtrer par recherche
+    if (_searchQuery.isNotEmpty) {
+      animauxFiltres = animauxFiltres.where((a) =>
+        a.nom.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        a.race.toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
+    }
+
+    // Récupérer toutes les espèces uniques
+    final especesUniques = ['Tous', ..._animaux.map((a) => a.espece).toSet().toList()..sort()];
+
     return Column(
       children: [
+        // Barre de recherche
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Rechercher par nom ou race...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.grey[100],
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+        ),
+        // Barre de filtres
+        Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            itemCount: especesUniques.length,
+            itemBuilder: (context, index) {
+              final espece = especesUniques[index];
+              final isSelected = _filtreEspece == espece;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: FilterChip(
+                  label: Text(espece),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _filtreEspece = espece;
+                    });
+                  },
+                  backgroundColor: Colors.grey[200],
+                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                  labelStyle: TextStyle(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey[700],
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
         if (_selectionMode)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -834,20 +1019,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextButton.icon(
                   onPressed: () {
                     setState(() {
-                      if (_selectedAnimaux.length == _animaux.length) {
+                      if (_selectedAnimaux.length == animauxFiltres.length) {
                         _selectedAnimaux.clear();
                       } else {
-                        _selectedAnimaux = _animaux.map((a) => a.id).toSet();
+                        _selectedAnimaux = animauxFiltres.map((a) => a.id).toSet();
                       }
                     });
                   },
                   icon: Icon(
-                    _selectedAnimaux.length == _animaux.length
+                    _selectedAnimaux.length == animauxFiltres.length
                         ? Icons.deselect
                         : Icons.select_all,
                   ),
                   label: Text(
-                    _selectedAnimaux.length == _animaux.length
+                    _selectedAnimaux.length == animauxFiltres.length
                         ? 'Tout désélectionner'
                         : 'Tout sélectionner',
                   ),
@@ -865,95 +1050,116 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: _loadAnimaux,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: _animaux.length,
-              itemBuilder: (context, index) {
-                final animal = _animaux[index];
-                final nbVaccins = animal.vaccins.length;
-                final prochainVaccin = animal.prochainVaccin;
-                final isSelected = _selectedAnimaux.contains(animal.id);
+          child: animauxFiltres.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 80,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Aucun résultat',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadAnimaux,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: animauxFiltres.length,
+                    itemBuilder: (context, index) {
+                      final animal = animauxFiltres[index];
+                      final nbVaccins = animal.vaccins.length;
+                      final prochainVaccin = animal.prochainVaccin;
+                      final isSelected = _selectedAnimaux.contains(animal.id);
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
-                  child: ListTile(
-                    leading: _selectionMode
-                        ? Checkbox(
-                            value: isSelected,
-                            onChanged: (value) {
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
+                        child: ListTile(
+                          leading: _selectionMode
+                              ? Checkbox(
+                                  value: isSelected,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      if (value == true) {
+                                        _selectedAnimaux.add(animal.id);
+                                      } else {
+                                        _selectedAnimaux.remove(animal.id);
+                                      }
+                                    });
+                                  },
+                                )
+                              : CircleAvatar(
+                                  radius: 25,
+                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  backgroundImage: animal.photoPath != null
+                                      ? FileImage(File(animal.photoPath!))
+                                      : null,
+                                  child: animal.photoPath == null
+                                      ? Icon(
+                                          _getAnimalIcon(animal.espece),
+                                          size: 28,
+                                          color: Theme.of(context).colorScheme.primary,
+                                        )
+                                      : null,
+                                ),
+                          title: Text(
+                            animal.nom,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            nbVaccins == 0
+                                ? 'Aucun vaccin'
+                                : '$nbVaccins vaccin${nbVaccins > 1 ? 's' : ''}'
+                                '${prochainVaccin != null ? ' (rappel prévu)' : ''}',
+                            style: TextStyle(
+                              color: prochainVaccin != null ? Colors.blue[700] : Colors.grey[600],
+                            ),
+                          ),
+                          trailing: _selectionMode ? null : const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            if (_selectionMode) {
                               setState(() {
-                                if (value == true) {
-                                  _selectedAnimaux.add(animal.id);
-                                } else {
+                                if (isSelected) {
                                   _selectedAnimaux.remove(animal.id);
+                                } else {
+                                  _selectedAnimaux.add(animal.id);
                                 }
                               });
-                            },
-                          )
-                        : CircleAvatar(
-                            radius: 25,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            backgroundImage: animal.photoPath != null
-                                ? FileImage(File(animal.photoPath!))
-                                : null,
-                            child: animal.photoPath == null
-                                ? Icon(
-                                    _getAnimalIcon(animal.espece),
-                                    size: 28,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  )
-                                : null,
-                          ),
-                    title: Text(
-                      animal.nom,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: Text(
-                      nbVaccins == 0
-                          ? 'Aucun vaccin'
-                          : '$nbVaccins vaccin${nbVaccins > 1 ? 's' : ''}'
-                          '${prochainVaccin != null ? ' (rappel prévu)' : ''}',
-                      style: TextStyle(
-                        color: prochainVaccin != null ? Colors.blue[700] : Colors.grey[600],
-                      ),
-                    ),
-                    trailing: _selectionMode ? null : const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      if (_selectionMode) {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedAnimaux.remove(animal.id);
-                          } else {
-                            _selectedAnimaux.add(animal.id);
-                          }
-                        });
-                      } else {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AnimalVaccinsScreen(animal: animal),
-                          ),
-                        );
-                        _loadAnimaux();
-                      }
-                    },
-                    onLongPress: () {
-                      setState(() {
-                        _selectionMode = true;
-                        _selectedAnimaux.add(animal.id);
-                      });
+                            } else {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AnimalVaccinsScreen(animal: animal),
+                                ),
+                              );
+                              _loadAnimaux();
+                            }
+                          },
+                          onLongPress: () {
+                            setState(() {
+                              _selectionMode = true;
+                              _selectedAnimaux.add(animal.id);
+                            });
+                          },
+                        ),
+                      );
                     },
                   ),
-                );
-              },
-            ),
-          ),
+                ),
         ),
       ],
     );
@@ -987,8 +1193,90 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // Filtrer les animaux selon l'espèce sélectionnée et la recherche
+    var animauxFiltres = _filtreEspece == 'Tous'
+        ? _animaux
+        : _animaux.where((a) => a.espece == _filtreEspece).toList();
+
+    // Filtrer par recherche
+    if (_searchQuery.isNotEmpty) {
+      animauxFiltres = animauxFiltres.where((a) =>
+        a.nom.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        a.race.toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
+    }
+
+    // Récupérer toutes les espèces uniques
+    final especesUniques = ['Tous', ..._animaux.map((a) => a.espece).toSet().toList()..sort()];
+
     return Column(
       children: [
+        // Barre de recherche
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Rechercher par nom ou race...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.grey[100],
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+        ),
+        // Barre de filtres
+        Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            itemCount: especesUniques.length,
+            itemBuilder: (context, index) {
+              final espece = especesUniques[index];
+              final isSelected = _filtreEspece == espece;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: FilterChip(
+                  label: Text(espece),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _filtreEspece = espece;
+                    });
+                  },
+                  backgroundColor: Colors.grey[200],
+                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                  labelStyle: TextStyle(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey[700],
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
         if (_selectionMode)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1003,20 +1291,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextButton.icon(
                   onPressed: () {
                     setState(() {
-                      if (_selectedAnimaux.length == _animaux.length) {
+                      if (_selectedAnimaux.length == animauxFiltres.length) {
                         _selectedAnimaux.clear();
                       } else {
-                        _selectedAnimaux = _animaux.map((a) => a.id).toSet();
+                        _selectedAnimaux = animauxFiltres.map((a) => a.id).toSet();
                       }
                     });
                   },
                   icon: Icon(
-                    _selectedAnimaux.length == _animaux.length
+                    _selectedAnimaux.length == animauxFiltres.length
                         ? Icons.deselect
                         : Icons.select_all,
                   ),
                   label: Text(
-                    _selectedAnimaux.length == _animaux.length
+                    _selectedAnimaux.length == animauxFiltres.length
                         ? 'Tout désélectionner'
                         : 'Tout sélectionner',
                   ),
@@ -1034,95 +1322,116 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: _loadAnimaux,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: _animaux.length,
-              itemBuilder: (context, index) {
-                final animal = _animaux[index];
-                final nbMaladies = animal.maladies.length;
-                final maladiesActives = animal.maladies.where((m) => !m.estGuerite).length;
-                final isSelected = _selectedAnimaux.contains(animal.id);
+          child: animauxFiltres.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 80,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Aucun résultat',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadAnimaux,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: animauxFiltres.length,
+                    itemBuilder: (context, index) {
+                      final animal = animauxFiltres[index];
+                      final nbMaladies = animal.maladies.length;
+                      final maladiesActives = animal.maladies.where((m) => !m.estGuerite).length;
+                      final isSelected = _selectedAnimaux.contains(animal.id);
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
-                  child: ListTile(
-                    leading: _selectionMode
-                        ? Checkbox(
-                            value: isSelected,
-                            onChanged: (value) {
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
+                        child: ListTile(
+                          leading: _selectionMode
+                              ? Checkbox(
+                                  value: isSelected,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      if (value == true) {
+                                        _selectedAnimaux.add(animal.id);
+                                      } else {
+                                        _selectedAnimaux.remove(animal.id);
+                                      }
+                                    });
+                                  },
+                                )
+                              : CircleAvatar(
+                                  radius: 25,
+                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  backgroundImage: animal.photoPath != null
+                                      ? FileImage(File(animal.photoPath!))
+                                      : null,
+                                  child: animal.photoPath == null
+                                      ? Icon(
+                                          _getAnimalIcon(animal.espece),
+                                          size: 28,
+                                          color: Theme.of(context).colorScheme.primary,
+                                        )
+                                      : null,
+                                ),
+                          title: Text(
+                            animal.nom,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            nbMaladies == 0
+                                ? 'Aucune maladie'
+                                : '$nbMaladies maladie${nbMaladies > 1 ? 's' : ''}'
+                                '${maladiesActives > 0 ? ' ($maladiesActives active${maladiesActives > 1 ? 's' : ''})' : ''}',
+                            style: TextStyle(
+                              color: maladiesActives > 0 ? Colors.red[700] : Colors.grey[600],
+                            ),
+                          ),
+                          trailing: _selectionMode ? null : const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            if (_selectionMode) {
                               setState(() {
-                                if (value == true) {
-                                  _selectedAnimaux.add(animal.id);
-                                } else {
+                                if (isSelected) {
                                   _selectedAnimaux.remove(animal.id);
+                                } else {
+                                  _selectedAnimaux.add(animal.id);
                                 }
                               });
-                            },
-                          )
-                        : CircleAvatar(
-                            radius: 25,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            backgroundImage: animal.photoPath != null
-                                ? FileImage(File(animal.photoPath!))
-                                : null,
-                            child: animal.photoPath == null
-                                ? Icon(
-                                    _getAnimalIcon(animal.espece),
-                                    size: 28,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  )
-                                : null,
-                          ),
-                    title: Text(
-                      animal.nom,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: Text(
-                      nbMaladies == 0
-                          ? 'Aucune maladie'
-                          : '$nbMaladies maladie${nbMaladies > 1 ? 's' : ''}'
-                          '${maladiesActives > 0 ? ' ($maladiesActives active${maladiesActives > 1 ? 's' : ''})' : ''}',
-                      style: TextStyle(
-                        color: maladiesActives > 0 ? Colors.red[700] : Colors.grey[600],
-                      ),
-                    ),
-                    trailing: _selectionMode ? null : const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      if (_selectionMode) {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedAnimaux.remove(animal.id);
-                          } else {
-                            _selectedAnimaux.add(animal.id);
-                          }
-                        });
-                      } else {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AnimalMaladiesScreen(animal: animal),
-                          ),
-                        );
-                        _loadAnimaux();
-                      }
-                    },
-                    onLongPress: () {
-                      setState(() {
-                        _selectionMode = true;
-                        _selectedAnimaux.add(animal.id);
-                      });
+                            } else {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AnimalMaladiesScreen(animal: animal),
+                                ),
+                              );
+                              _loadAnimaux();
+                            }
+                          },
+                          onLongPress: () {
+                            setState(() {
+                              _selectionMode = true;
+                              _selectedAnimaux.add(animal.id);
+                            });
+                          },
+                        ),
+                      );
                     },
                   ),
-                );
-              },
-            ),
-          ),
+                ),
         ),
       ],
     );
