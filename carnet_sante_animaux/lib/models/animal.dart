@@ -13,6 +13,7 @@ class Animal {
   final List<Traitement> traitements;
   final List<Vaccin> vaccins;
   final List<ConsultationVeterinaire> consultations;
+  final List<Maladie> maladies;
   final String? notes;
 
   Animal({
@@ -30,6 +31,7 @@ class Animal {
     this.traitements = const [],
     this.vaccins = const [],
     this.consultations = const [],
+    this.maladies = const [],
     this.notes,
   });
 
@@ -80,6 +82,7 @@ class Animal {
       'traitements': traitements.map((t) => t.toJson()).toList(),
       'vaccins': vaccins.map((v) => v.toJson()).toList(),
       'consultations': consultations.map((c) => c.toJson()).toList(),
+      'maladies': maladies.map((m) => m.toJson()).toList(),
       'notes': notes,
     };
   }
@@ -109,6 +112,10 @@ class Animal {
               ?.map((c) => ConsultationVeterinaire.fromJson(c))
               .toList() ??
           [],
+      maladies: (json['maladies'] as List?)
+              ?.map((m) => Maladie.fromJson(m))
+              .toList() ??
+          [],
       notes: json['notes'],
     );
   }
@@ -128,6 +135,7 @@ class Animal {
     List<Traitement>? traitements,
     List<Vaccin>? vaccins,
     List<ConsultationVeterinaire>? consultations,
+    List<Maladie>? maladies,
     String? notes,
   }) {
     return Animal(
@@ -145,6 +153,7 @@ class Animal {
       traitements: traitements ?? this.traitements,
       vaccins: vaccins ?? this.vaccins,
       consultations: consultations ?? this.consultations,
+      maladies: maladies ?? this.maladies,
       notes: notes ?? this.notes,
     );
   }
@@ -287,6 +296,60 @@ class ConsultationVeterinaire {
       diagnostic: json['diagnostic'],
       veterinaire: json['veterinaire'],
       poids: json['poids']?.toDouble(),
+      traitement: json['traitement'],
+      notes: json['notes'],
+    );
+  }
+}
+
+class Maladie {
+  final String id;
+  final String nom;
+  final DateTime dateDiagnostic;
+  final String? description;
+  final bool estChronique;
+  final bool estGuerite;
+  final DateTime? dateGuerison;
+  final String? traitement;
+  final String? notes;
+
+  Maladie({
+    required this.id,
+    required this.nom,
+    required this.dateDiagnostic,
+    this.description,
+    this.estChronique = false,
+    this.estGuerite = false,
+    this.dateGuerison,
+    this.traitement,
+    this.notes,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nom': nom,
+      'dateDiagnostic': dateDiagnostic.toIso8601String(),
+      'description': description,
+      'estChronique': estChronique,
+      'estGuerite': estGuerite,
+      'dateGuerison': dateGuerison?.toIso8601String(),
+      'traitement': traitement,
+      'notes': notes,
+    };
+  }
+
+  factory Maladie.fromJson(Map<String, dynamic> json) {
+    return Maladie(
+      id: json['id'],
+      nom: json['nom'],
+      dateDiagnostic: DateTime.parse(json['dateDiagnostic']),
+      description: json['description'],
+      estChronique: json['estChronique'] ?? false,
+      estGuerite: json['estGuerite'] ?? false,
+      dateGuerison: json['dateGuerison'] != null
+          ? DateTime.parse(json['dateGuerison'])
+          : null,
       traitement: json['traitement'],
       notes: json['notes'],
     );

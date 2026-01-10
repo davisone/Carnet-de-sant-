@@ -6,6 +6,9 @@ import '../services/firebase_animal_service.dart';
 import 'animal_detail_screen.dart';
 import 'add_animal_screen.dart';
 import 'family_tree_screen.dart';
+import 'animal_traitements_screen.dart';
+import 'animal_vaccins_screen.dart';
+import 'animal_maladies_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String _filtreEspece = 'Tous';
   String _searchQuery = '';
+  bool _selectionMode = false;
+  Set<String> _selectedAnimaux = {};
 
   @override
   void initState() {
@@ -72,7 +77,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ? _buildTousLesAnimaux()
               : _selectedIndex == 2
                   ? _buildTraitementsEnCours()
-                  : _buildVaccinsAVenir(),
+                  : _selectedIndex == 3
+                      ? _buildVaccinsAVenir()
+                      : _buildMaladies(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -95,21 +102,13 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.vaccines),
             label: 'Vaccins',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.health_and_safety),
+            label: 'Maladies',
+          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddAnimalScreen()),
-          );
-          if (result == true) {
-            _loadAnimaux();
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Ajouter un animal'),
-      ),
+      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
@@ -627,10 +626,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final animauxAvecTraitement =
-        _animaux.where((a) => a.traitementsEnCours.isNotEmpty).toList();
-
-    if (animauxAvecTraitement.isEmpty) {
+    if (_animaux.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -642,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucun traitement en cours',
+              'Aucun animal enregistré',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.grey[600],
@@ -653,83 +649,144 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(8),
-      itemCount: animauxAvecTraitement.length,
-      itemBuilder: (context, index) {
-        final animal = animauxAvecTraitement[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      children: [
+        if (_selectionMode)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(
-                        _getAnimalIcon(animal.espece),
-                        size: 24,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
+                Text(
+                  '${_selectedAnimaux.length} sélectionné${_selectedAnimaux.length > 1 ? 's' : ''}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      if (_selectedAnimaux.length == _animaux.length) {
+                        _selectedAnimaux.clear();
+                      } else {
+                        _selectedAnimaux = _animaux.map((a) => a.id).toSet();
+                      }
+                    });
+                  },
+                  icon: Icon(
+                    _selectedAnimaux.length == _animaux.length
+                        ? Icons.deselect
+                        : Icons.select_all,
+                  ),
+                  label: Text(
+                    _selectedAnimaux.length == _animaux.length
+                        ? 'Tout désélectionner'
+                        : 'Tout sélectionner',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectionMode = false;
+                      _selectedAnimaux.clear();
+                    });
+                  },
+                  child: const Text('Annuler'),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadAnimaux,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: _animaux.length,
+              itemBuilder: (context, index) {
+                final animal = _animaux[index];
+                final nbTraitements = animal.traitements.length;
+                final nbTraitementsEnCours = animal.traitementsEnCours.length;
+                final isSelected = _selectedAnimaux.contains(animal.id);
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
+                  child: ListTile(
+                    leading: _selectionMode
+                        ? Checkbox(
+                            value: isSelected,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedAnimaux.add(animal.id);
+                                } else {
+                                  _selectedAnimaux.remove(animal.id);
+                                }
+                              });
+                            },
+                          )
+                        : CircleAvatar(
+                            radius: 25,
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            backgroundImage: animal.photoPath != null
+                                ? FileImage(File(animal.photoPath!))
+                                : null,
+                            child: animal.photoPath == null
+                                ? Icon(
+                                    _getAnimalIcon(animal.espece),
+                                    size: 28,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  )
+                                : null,
+                          ),
+                    title: Text(
                       animal.nom,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
-                ),
-                const Divider(),
-                ...animal.traitementsEnCours.map((traitement) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Icon(Icons.medication, color: Colors.orange[700]),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                traitement.nom,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                traitement.posologie,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              if (traitement.dateFin != null)
-                                Text(
-                                  'Fin: ${DateFormat('dd/MM/yyyy').format(traitement.dateFin!)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    subtitle: Text(
+                      nbTraitements == 0
+                          ? 'Aucun traitement'
+                          : '$nbTraitements traitement${nbTraitements > 1 ? 's' : ''}'
+                          '${nbTraitementsEnCours > 0 ? ' ($nbTraitementsEnCours en cours)' : ''}',
+                      style: TextStyle(
+                        color: nbTraitementsEnCours > 0 ? Colors.orange[700] : Colors.grey[600],
+                      ),
                     ),
-                  )),
-              ],
+                    trailing: _selectionMode ? null : const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      if (_selectionMode) {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedAnimaux.remove(animal.id);
+                          } else {
+                            _selectedAnimaux.add(animal.id);
+                          }
+                        });
+                      } else {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AnimalTraitementsScreen(animal: animal),
+                          ),
+                        );
+                        _loadAnimaux();
+                      }
+                    },
+                    onLongPress: () {
+                      setState(() {
+                        _selectionMode = true;
+                        _selectedAnimaux.add(animal.id);
+                      });
+                    },
+                  ),
+                );
+              },
             ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
@@ -738,16 +795,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final animauxAvecVaccin =
-        _animaux.where((a) => a.prochainVaccin != null).toList();
-
-    animauxAvecVaccin.sort((a, b) {
-      final dateA = a.prochainVaccin!.dateRappel!;
-      final dateB = b.prochainVaccin!.dateRappel!;
-      return dateA.compareTo(dateB);
-    });
-
-    if (animauxAvecVaccin.isEmpty) {
+    if (_animaux.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -759,7 +807,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucun vaccin à venir',
+              'Aucun animal enregistré',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.grey[600],
@@ -770,88 +818,823 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(8),
-      itemCount: animauxAvecVaccin.length,
-      itemBuilder: (context, index) {
-        final animal = animauxAvecVaccin[index];
-        final vaccin = animal.prochainVaccin!;
-        final joursRestants =
-            vaccin.dateRappel!.difference(DateTime.now()).inDays;
-
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
+    return Column(
+      children: [
+        if (_selectionMode)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Theme.of(context).colorScheme.primaryContainer,
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 25,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  child: Icon(
-                    _getAnimalIcon(animal.espece),
-                    size: 28,
-                    color: Theme.of(context).colorScheme.primary,
+                Text(
+                  '${_selectedAnimaux.length} sélectionné${_selectedAnimaux.length > 1 ? 's' : ''}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      if (_selectedAnimaux.length == _animaux.length) {
+                        _selectedAnimaux.clear();
+                      } else {
+                        _selectedAnimaux = _animaux.map((a) => a.id).toSet();
+                      }
+                    });
+                  },
+                  icon: Icon(
+                    _selectedAnimaux.length == _animaux.length
+                        ? Icons.deselect
+                        : Icons.select_all,
+                  ),
+                  label: Text(
+                    _selectedAnimaux.length == _animaux.length
+                        ? 'Tout désélectionner'
+                        : 'Tout sélectionner',
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        animal.nom,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        vaccin.nom,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 14,
-                            color: joursRestants <= 7
-                                ? Colors.red
-                                : joursRestants <= 30
-                                    ? Colors.orange
-                                    : Colors.blue,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${DateFormat('dd/MM/yyyy').format(vaccin.dateRappel!)} ($joursRestants jour${joursRestants > 1 ? 's' : ''})',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: joursRestants <= 7
-                                  ? Colors.red
-                                  : joursRestants <= 30
-                                      ? Colors.orange
-                                      : Colors.blue,
-                              fontWeight: joursRestants <= 7
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectionMode = false;
+                      _selectedAnimaux.clear();
+                    });
+                  },
+                  child: const Text('Annuler'),
                 ),
               ],
             ),
           ),
-        );
-      },
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadAnimaux,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: _animaux.length,
+              itemBuilder: (context, index) {
+                final animal = _animaux[index];
+                final nbVaccins = animal.vaccins.length;
+                final prochainVaccin = animal.prochainVaccin;
+                final isSelected = _selectedAnimaux.contains(animal.id);
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
+                  child: ListTile(
+                    leading: _selectionMode
+                        ? Checkbox(
+                            value: isSelected,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedAnimaux.add(animal.id);
+                                } else {
+                                  _selectedAnimaux.remove(animal.id);
+                                }
+                              });
+                            },
+                          )
+                        : CircleAvatar(
+                            radius: 25,
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            backgroundImage: animal.photoPath != null
+                                ? FileImage(File(animal.photoPath!))
+                                : null,
+                            child: animal.photoPath == null
+                                ? Icon(
+                                    _getAnimalIcon(animal.espece),
+                                    size: 28,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  )
+                                : null,
+                          ),
+                    title: Text(
+                      animal.nom,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Text(
+                      nbVaccins == 0
+                          ? 'Aucun vaccin'
+                          : '$nbVaccins vaccin${nbVaccins > 1 ? 's' : ''}'
+                          '${prochainVaccin != null ? ' (rappel prévu)' : ''}',
+                      style: TextStyle(
+                        color: prochainVaccin != null ? Colors.blue[700] : Colors.grey[600],
+                      ),
+                    ),
+                    trailing: _selectionMode ? null : const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      if (_selectionMode) {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedAnimaux.remove(animal.id);
+                          } else {
+                            _selectedAnimaux.add(animal.id);
+                          }
+                        });
+                      } else {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AnimalVaccinsScreen(animal: animal),
+                          ),
+                        );
+                        _loadAnimaux();
+                      }
+                    },
+                    onLongPress: () {
+                      setState(() {
+                        _selectionMode = true;
+                        _selectedAnimaux.add(animal.id);
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  Widget _buildMaladies() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_animaux.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.health_and_safety,
+              size: 100,
+              color: Colors.grey[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucun animal enregistré',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        if (_selectionMode)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Row(
+              children: [
+                Text(
+                  '${_selectedAnimaux.length} sélectionné${_selectedAnimaux.length > 1 ? 's' : ''}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      if (_selectedAnimaux.length == _animaux.length) {
+                        _selectedAnimaux.clear();
+                      } else {
+                        _selectedAnimaux = _animaux.map((a) => a.id).toSet();
+                      }
+                    });
+                  },
+                  icon: Icon(
+                    _selectedAnimaux.length == _animaux.length
+                        ? Icons.deselect
+                        : Icons.select_all,
+                  ),
+                  label: Text(
+                    _selectedAnimaux.length == _animaux.length
+                        ? 'Tout désélectionner'
+                        : 'Tout sélectionner',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectionMode = false;
+                      _selectedAnimaux.clear();
+                    });
+                  },
+                  child: const Text('Annuler'),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadAnimaux,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: _animaux.length,
+              itemBuilder: (context, index) {
+                final animal = _animaux[index];
+                final nbMaladies = animal.maladies.length;
+                final maladiesActives = animal.maladies.where((m) => !m.estGuerite).length;
+                final isSelected = _selectedAnimaux.contains(animal.id);
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : null,
+                  child: ListTile(
+                    leading: _selectionMode
+                        ? Checkbox(
+                            value: isSelected,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedAnimaux.add(animal.id);
+                                } else {
+                                  _selectedAnimaux.remove(animal.id);
+                                }
+                              });
+                            },
+                          )
+                        : CircleAvatar(
+                            radius: 25,
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            backgroundImage: animal.photoPath != null
+                                ? FileImage(File(animal.photoPath!))
+                                : null,
+                            child: animal.photoPath == null
+                                ? Icon(
+                                    _getAnimalIcon(animal.espece),
+                                    size: 28,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  )
+                                : null,
+                          ),
+                    title: Text(
+                      animal.nom,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Text(
+                      nbMaladies == 0
+                          ? 'Aucune maladie'
+                          : '$nbMaladies maladie${nbMaladies > 1 ? 's' : ''}'
+                          '${maladiesActives > 0 ? ' ($maladiesActives active${maladiesActives > 1 ? 's' : ''})' : ''}',
+                      style: TextStyle(
+                        color: maladiesActives > 0 ? Colors.red[700] : Colors.grey[600],
+                      ),
+                    ),
+                    trailing: _selectionMode ? null : const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      if (_selectionMode) {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedAnimaux.remove(animal.id);
+                          } else {
+                            _selectedAnimaux.add(animal.id);
+                          }
+                        });
+                      } else {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AnimalMaladiesScreen(animal: animal),
+                          ),
+                        );
+                        _loadAnimaux();
+                      }
+                    },
+                    onLongPress: () {
+                      setState(() {
+                        _selectionMode = true;
+                        _selectedAnimaux.add(animal.id);
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget? _buildFloatingActionButton() {
+    // Onglet Accueil ou Animaux : Ajouter un animal
+    if (_selectedIndex == 0 || _selectedIndex == 1) {
+      return FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddAnimalScreen()),
+          );
+          if (result == true) {
+            _loadAnimaux();
+          }
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Ajouter un animal'),
+      );
+    }
+
+    // Onglet Traitements en mode sélection
+    if (_selectedIndex == 2 && _selectionMode && _selectedAnimaux.isNotEmpty) {
+      return FloatingActionButton.extended(
+        onPressed: _ajouterTraitementGroupe,
+        icon: const Icon(Icons.medication),
+        label: Text('Traiter ${_selectedAnimaux.length} animaux'),
+      );
+    }
+
+    // Onglet Traitements sans sélection
+    if (_selectedIndex == 2) {
+      return FloatingActionButton.extended(
+        onPressed: () {
+          setState(() {
+            _selectionMode = true;
+          });
+        },
+        icon: const Icon(Icons.checklist),
+        label: const Text('Sélectionner'),
+      );
+    }
+
+    // Onglet Vaccins en mode sélection
+    if (_selectedIndex == 3 && _selectionMode && _selectedAnimaux.isNotEmpty) {
+      return FloatingActionButton.extended(
+        onPressed: _ajouterVaccinGroupe,
+        icon: const Icon(Icons.vaccines),
+        label: Text('Vacciner ${_selectedAnimaux.length} animaux'),
+      );
+    }
+
+    // Onglet Vaccins sans sélection
+    if (_selectedIndex == 3) {
+      return FloatingActionButton.extended(
+        onPressed: () {
+          setState(() {
+            _selectionMode = true;
+          });
+        },
+        icon: const Icon(Icons.checklist),
+        label: const Text('Sélectionner'),
+      );
+    }
+
+    // Onglet Maladies en mode sélection
+    if (_selectedIndex == 4 && _selectionMode && _selectedAnimaux.isNotEmpty) {
+      return FloatingActionButton.extended(
+        onPressed: _ajouterMaladieGroupe,
+        icon: const Icon(Icons.health_and_safety),
+        label: Text('${_selectedAnimaux.length} animaux'),
+      );
+    }
+
+    // Onglet Maladies sans sélection
+    if (_selectedIndex == 4) {
+      return FloatingActionButton.extended(
+        onPressed: () {
+          setState(() {
+            _selectionMode = true;
+          });
+        },
+        icon: const Icon(Icons.checklist),
+        label: const Text('Sélectionner'),
+      );
+    }
+
+    return null;
+  }
+
+  Future<void> _ajouterTraitementGroupe() async {
+    final formKey = GlobalKey<FormState>();
+    String nom = '';
+    String description = '';
+    String posologie = '';
+    DateTime dateDebut = DateTime.now();
+    DateTime? dateFin;
+    String notes = '';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Traiter ${_selectedAnimaux.length} animaux'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Nom du traitement'),
+                    validator: (value) => value?.isEmpty ?? true ? 'Requis' : null,
+                    onSaved: (value) => nom = value!,
+                  ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Description'),
+                    validator: (value) => value?.isEmpty ?? true ? 'Requis' : null,
+                    onSaved: (value) => description = value!,
+                  ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Posologie'),
+                    validator: (value) => value?.isEmpty ?? true ? 'Requis' : null,
+                    onSaved: (value) => posologie = value!,
+                  ),
+                  ListTile(
+                    title: const Text('Date de début'),
+                    subtitle: Text(DateFormat('dd/MM/yyyy').format(dateDebut)),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: dateDebut,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        setState(() => dateDebut = date);
+                      }
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('Date de fin (optionnelle)'),
+                    subtitle: Text(dateFin != null ? DateFormat('dd/MM/yyyy').format(dateFin!) : 'Non définie'),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: dateFin ?? DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        setState(() => dateFin = date);
+                      }
+                    },
+                  ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Notes (optionnelles)'),
+                    maxLines: 3,
+                    onSaved: (value) => notes = value ?? '',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  formKey.currentState!.save();
+                  Navigator.pop(context, true);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      // Ajouter le traitement à tous les animaux sélectionnés
+      for (final animalId in _selectedAnimaux) {
+        final animal = _animaux.firstWhere((a) => a.id == animalId);
+
+        final newTraitement = Traitement(
+          id: '${DateTime.now().millisecondsSinceEpoch}_$animalId',
+          nom: nom,
+          description: description,
+          posologie: posologie,
+          dateDebut: dateDebut,
+          dateFin: dateFin,
+          notes: notes.isEmpty ? null : notes,
+        );
+
+        final updatedAnimal = animal.copyWith(
+          traitements: [...animal.traitements, newTraitement],
+        );
+
+        await _animalService.saveAnimal(updatedAnimal);
+      }
+
+      setState(() {
+        _selectionMode = false;
+        _selectedAnimaux.clear();
+      });
+
+      await _loadAnimaux();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Traitement ajouté à ${_selectedAnimaux.length} animaux'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _ajouterVaccinGroupe() async {
+    final formKey = GlobalKey<FormState>();
+    String nom = '';
+    DateTime dateAdministration = DateTime.now();
+    DateTime? dateRappel;
+    String numeroLot = '';
+    String veterinaire = '';
+    String notes = '';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Vacciner ${_selectedAnimaux.length} animaux'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Nom du vaccin'),
+                    validator: (value) => value?.isEmpty ?? true ? 'Requis' : null,
+                    onSaved: (value) => nom = value!,
+                  ),
+                  ListTile(
+                    title: const Text('Date d\'administration'),
+                    subtitle: Text(DateFormat('dd/MM/yyyy').format(dateAdministration)),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: dateAdministration,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        setState(() => dateAdministration = date);
+                      }
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('Date de rappel (optionnelle)'),
+                    subtitle: Text(dateRappel != null ? DateFormat('dd/MM/yyyy').format(dateRappel!) : 'Non définie'),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: dateRappel ?? DateTime.now().add(const Duration(days: 365)),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        setState(() => dateRappel = date);
+                      }
+                    },
+                  ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Numéro de lot (optionnel)'),
+                    onSaved: (value) => numeroLot = value ?? '',
+                  ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Vétérinaire (optionnel)'),
+                    onSaved: (value) => veterinaire = value ?? '',
+                  ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Notes (optionnelles)'),
+                    maxLines: 3,
+                    onSaved: (value) => notes = value ?? '',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  formKey.currentState!.save();
+                  Navigator.pop(context, true);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      for (final animalId in _selectedAnimaux) {
+        final animal = _animaux.firstWhere((a) => a.id == animalId);
+
+        final newVaccin = Vaccin(
+          id: '${DateTime.now().millisecondsSinceEpoch}_$animalId',
+          nom: nom,
+          dateAdministration: dateAdministration,
+          dateRappel: dateRappel,
+          numeroLot: numeroLot.isEmpty ? null : numeroLot,
+          veterinaire: veterinaire.isEmpty ? null : veterinaire,
+          notes: notes.isEmpty ? null : notes,
+        );
+
+        final updatedAnimal = animal.copyWith(
+          vaccins: [...animal.vaccins, newVaccin],
+        );
+
+        await _animalService.saveAnimal(updatedAnimal);
+      }
+
+      setState(() {
+        _selectionMode = false;
+        _selectedAnimaux.clear();
+      });
+
+      await _loadAnimaux();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Vaccin ajouté à ${_selectedAnimaux.length} animaux'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _ajouterMaladieGroupe() async {
+    final formKey = GlobalKey<FormState>();
+    String nom = '';
+    String description = '';
+    DateTime dateDiagnostic = DateTime.now();
+    bool estChronique = false;
+    bool estGuerite = false;
+    DateTime? dateGuerison;
+    String traitement = '';
+    String notes = '';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Maladie pour ${_selectedAnimaux.length} animaux'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Nom de la maladie'),
+                    validator: (value) => value?.isEmpty ?? true ? 'Requis' : null,
+                    onSaved: (value) => nom = value!,
+                  ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Description'),
+                    maxLines: 2,
+                    onSaved: (value) => description = value ?? '',
+                  ),
+                  ListTile(
+                    title: const Text('Date de diagnostic'),
+                    subtitle: Text(DateFormat('dd/MM/yyyy').format(dateDiagnostic)),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: dateDiagnostic,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        setState(() => dateDiagnostic = date);
+                      }
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: const Text('Maladie chronique'),
+                    value: estChronique,
+                    onChanged: (value) {
+                      setState(() => estChronique = value ?? false);
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: const Text('Animaux guéris'),
+                    value: estGuerite,
+                    onChanged: (value) {
+                      setState(() => estGuerite = value ?? false);
+                    },
+                  ),
+                  if (estGuerite)
+                    ListTile(
+                      title: const Text('Date de guérison'),
+                      subtitle: Text(dateGuerison != null
+                          ? DateFormat('dd/MM/yyyy').format(dateGuerison!)
+                          : 'Non définie'),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: dateGuerison ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (date != null) {
+                          setState(() => dateGuerison = date);
+                        }
+                      },
+                    ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Traitement (optionnel)'),
+                    maxLines: 2,
+                    onSaved: (value) => traitement = value ?? '',
+                  ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Notes (optionnelles)'),
+                    maxLines: 3,
+                    onSaved: (value) => notes = value ?? '',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  formKey.currentState!.save();
+                  Navigator.pop(context, true);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      for (final animalId in _selectedAnimaux) {
+        final animal = _animaux.firstWhere((a) => a.id == animalId);
+
+        final newMaladie = Maladie(
+          id: '${DateTime.now().millisecondsSinceEpoch}_$animalId',
+          nom: nom,
+          dateDiagnostic: dateDiagnostic,
+          description: description.isEmpty ? null : description,
+          estChronique: estChronique,
+          estGuerite: estGuerite,
+          dateGuerison: dateGuerison,
+          traitement: traitement.isEmpty ? null : traitement,
+          notes: notes.isEmpty ? null : notes,
+        );
+
+        final updatedAnimal = animal.copyWith(
+          maladies: [...animal.maladies, newMaladie],
+        );
+
+        await _animalService.saveAnimal(updatedAnimal);
+      }
+
+      setState(() {
+        _selectionMode = false;
+        _selectedAnimaux.clear();
+      });
+
+      await _loadAnimaux();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Maladie ajoutée à ${_selectedAnimaux.length} animaux'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 
   IconData _getAnimalIcon(String espece) {
