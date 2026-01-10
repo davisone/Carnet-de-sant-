@@ -20,11 +20,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final FirebaseAnimalService _animalService = FirebaseAnimalService();
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchControllerTraitements = TextEditingController();
+  final TextEditingController _searchControllerVaccins = TextEditingController();
+  final TextEditingController _searchControllerMaladies = TextEditingController();
   List<Animal> _animaux = [];
   bool _isLoading = true;
   int _selectedIndex = 0;
   String _filtreEspece = 'Tous';
   String _searchQuery = '';
+  String _filtreEspeceTraitements = 'Tous';
+  String _searchQueryTraitements = '';
+  String _filtreEspeceVaccins = 'Tous';
+  String _searchQueryVaccins = '';
+  String _filtreEspeceMaladies = 'Tous';
+  String _searchQueryMaladies = '';
   bool _selectionMode = false;
   Set<String> _selectedAnimaux = {};
 
@@ -46,6 +55,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchControllerTraitements.dispose();
+    _searchControllerVaccins.dispose();
+    _searchControllerMaladies.dispose();
     super.dispose();
   }
 
@@ -650,15 +662,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Filtrer les animaux selon l'espèce sélectionnée et la recherche
-    var animauxFiltres = _filtreEspece == 'Tous'
+    var animauxFiltres = _filtreEspeceTraitements == 'Tous'
         ? _animaux
-        : _animaux.where((a) => a.espece == _filtreEspece).toList();
+        : _animaux.where((a) => a.espece == _filtreEspeceTraitements).toList();
 
     // Filtrer par recherche
-    if (_searchQuery.isNotEmpty) {
+    if (_searchQueryTraitements.isNotEmpty) {
       animauxFiltres = animauxFiltres.where((a) =>
-        a.nom.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        a.race.toLowerCase().contains(_searchQuery.toLowerCase())
+        a.nom.toLowerCase().contains(_searchQueryTraitements.toLowerCase()) ||
+        a.race.toLowerCase().contains(_searchQueryTraitements.toLowerCase())
       ).toList();
     }
 
@@ -671,17 +683,17 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: TextField(
-            controller: _searchController,
+            controller: _searchControllerTraitements,
             decoration: InputDecoration(
               hintText: 'Rechercher par nom ou race...',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
+              suffixIcon: _searchQueryTraitements.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         setState(() {
-                          _searchController.clear();
-                          _searchQuery = '';
+                          _searchControllerTraitements.clear();
+                          _searchQueryTraitements = '';
                         });
                       },
                     )
@@ -694,7 +706,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onChanged: (value) {
               setState(() {
-                _searchQuery = value;
+                _searchQueryTraitements = value;
               });
             },
           ),
@@ -709,7 +721,7 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: especesUniques.length,
             itemBuilder: (context, index) {
               final espece = especesUniques[index];
-              final isSelected = _filtreEspece == espece;
+              final isSelected = _filtreEspeceTraitements == espece;
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: FilterChip(
@@ -717,7 +729,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
-                      _filtreEspece = espece;
+                      _filtreEspeceTraitements = espece;
                     });
                   },
                   backgroundColor: Colors.grey[200],
@@ -922,15 +934,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Filtrer les animaux selon l'espèce sélectionnée et la recherche
-    var animauxFiltres = _filtreEspece == 'Tous'
+    var animauxFiltres = _filtreEspeceVaccins == 'Tous'
         ? _animaux
-        : _animaux.where((a) => a.espece == _filtreEspece).toList();
+        : _animaux.where((a) => a.espece == _filtreEspeceVaccins).toList();
 
     // Filtrer par recherche
-    if (_searchQuery.isNotEmpty) {
+    if (_searchQueryVaccins.isNotEmpty) {
       animauxFiltres = animauxFiltres.where((a) =>
-        a.nom.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        a.race.toLowerCase().contains(_searchQuery.toLowerCase())
+        a.nom.toLowerCase().contains(_searchQueryVaccins.toLowerCase()) ||
+        a.race.toLowerCase().contains(_searchQueryVaccins.toLowerCase())
       ).toList();
     }
 
@@ -943,17 +955,17 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: TextField(
-            controller: _searchController,
+            controller: _searchControllerVaccins,
             decoration: InputDecoration(
               hintText: 'Rechercher par nom ou race...',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
+              suffixIcon: _searchQueryVaccins.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         setState(() {
-                          _searchController.clear();
-                          _searchQuery = '';
+                          _searchControllerVaccins.clear();
+                          _searchQueryVaccins = '';
                         });
                       },
                     )
@@ -966,7 +978,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onChanged: (value) {
               setState(() {
-                _searchQuery = value;
+                _searchQueryVaccins = value;
               });
             },
           ),
@@ -981,7 +993,7 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: especesUniques.length,
             itemBuilder: (context, index) {
               final espece = especesUniques[index];
-              final isSelected = _filtreEspece == espece;
+              final isSelected = _filtreEspeceVaccins == espece;
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: FilterChip(
@@ -989,7 +1001,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
-                      _filtreEspece = espece;
+                      _filtreEspeceVaccins = espece;
                     });
                   },
                   backgroundColor: Colors.grey[200],
@@ -1194,15 +1206,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Filtrer les animaux selon l'espèce sélectionnée et la recherche
-    var animauxFiltres = _filtreEspece == 'Tous'
+    var animauxFiltres = _filtreEspeceMaladies == 'Tous'
         ? _animaux
-        : _animaux.where((a) => a.espece == _filtreEspece).toList();
+        : _animaux.where((a) => a.espece == _filtreEspeceMaladies).toList();
 
     // Filtrer par recherche
-    if (_searchQuery.isNotEmpty) {
+    if (_searchQueryMaladies.isNotEmpty) {
       animauxFiltres = animauxFiltres.where((a) =>
-        a.nom.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        a.race.toLowerCase().contains(_searchQuery.toLowerCase())
+        a.nom.toLowerCase().contains(_searchQueryMaladies.toLowerCase()) ||
+        a.race.toLowerCase().contains(_searchQueryMaladies.toLowerCase())
       ).toList();
     }
 
@@ -1215,17 +1227,17 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: TextField(
-            controller: _searchController,
+            controller: _searchControllerMaladies,
             decoration: InputDecoration(
               hintText: 'Rechercher par nom ou race...',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
+              suffixIcon: _searchQueryMaladies.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         setState(() {
-                          _searchController.clear();
-                          _searchQuery = '';
+                          _searchControllerMaladies.clear();
+                          _searchQueryMaladies = '';
                         });
                       },
                     )
@@ -1238,7 +1250,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onChanged: (value) {
               setState(() {
-                _searchQuery = value;
+                _searchQueryMaladies = value;
               });
             },
           ),
@@ -1253,7 +1265,7 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: especesUniques.length,
             itemBuilder: (context, index) {
               final espece = especesUniques[index];
-              final isSelected = _filtreEspece == espece;
+              final isSelected = _filtreEspeceMaladies == espece;
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: FilterChip(
@@ -1261,7 +1273,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
-                      _filtreEspece = espece;
+                      _filtreEspeceMaladies = espece;
                     });
                   },
                   backgroundColor: Colors.grey[200],
