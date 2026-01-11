@@ -9,6 +9,7 @@ import 'family_tree_screen.dart';
 import 'animal_traitements_screen.dart';
 import 'animal_vaccins_screen.dart';
 import 'animal_maladies_screen.dart';
+import 'animal_poids_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -135,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final jours = a.prochainVaccin!.dateRappel!.difference(DateTime.now()).inDays;
       return jours <= 7;
     }).toList();
+    final bebes = _animaux.where((a) => a.estBebe).toList();
 
     return RefreshIndicator(
       onRefresh: _loadAnimaux,
@@ -197,11 +199,13 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: _buildStatCard(
                   context,
-                  title: 'Vaccins urgents',
-                  value: '${vaccinsUrgents.length}',
-                  icon: Icons.warning,
-                  color: Colors.red,
-                  onTap: () => setState(() => _selectedIndex = 3),
+                  title: 'Bébés',
+                  value: '${bebes.length}',
+                  icon: Icons.child_care,
+                  color: Colors.purple,
+                  onTap: bebes.isEmpty ? null : () {
+                    // Scroll vers la section bébés
+                  },
                 ),
               ),
             ],
@@ -289,6 +293,55 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () => setState(() => _selectedIndex = 2),
                 child: Text('Voir tous les traitements (${animauxEnTraitement.length})'),
               ),
+          ],
+          if (bebes.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Bébés à surveiller',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            ...bebes.map((animal) {
+              return Card(
+                color: Colors.purple[50],
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.purple[100],
+                    backgroundImage: animal.photoPath != null
+                        ? FileImage(File(animal.photoPath!))
+                        : null,
+                    child: animal.photoPath == null
+                        ? Icon(
+                            _getAnimalIcon(animal.espece),
+                            color: Colors.purple[700],
+                          )
+                        : null,
+                  ),
+                  title: Text(animal.nom),
+                  subtitle: Row(
+                    children: [
+                      Text('${animal.ageEnMois} mois'),
+                      if (animal.dernierPoids != null) ...[
+                        const Text(' • '),
+                        Text('${animal.dernierPoids!.poids} kg'),
+                      ],
+                    ],
+                  ),
+                  trailing: const Icon(Icons.arrow_forward),
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AnimalPoidsScreen(animal: animal),
+                      ),
+                    );
+                    _loadAnimaux();
+                  },
+                ),
+              );
+            }).toList(),
           ],
           if (_animaux.isEmpty) ...[
             const SizedBox(height: 60),

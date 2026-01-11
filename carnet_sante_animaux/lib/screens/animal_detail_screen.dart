@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/animal.dart';
 import '../services/firebase_animal_service.dart';
 import 'add_animal_screen.dart';
+import 'animal_poids_screen.dart';
 
 class AnimalDetailScreen extends StatefulWidget {
   final Animal animal;
@@ -25,7 +26,9 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
   void initState() {
     super.initState();
     _animal = widget.animal;
-    _tabController = TabController(length: 4, vsync: this);
+    // Ajouter un onglet Poids pour les bébés (chèvres, moutons, chevaux < 1 an)
+    final nombreOnglets = _animal.estBebe ? 5 : 4;
+    _tabController = TabController(length: nombreOnglets, vsync: this);
   }
 
   @override
@@ -69,11 +72,13 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Infos', icon: Icon(Icons.info)),
-            Tab(text: 'Traitements', icon: Icon(Icons.medication)),
-            Tab(text: 'Vaccins', icon: Icon(Icons.vaccines)),
-            Tab(text: 'Consultations', icon: Icon(Icons.medical_services)),
+          tabs: [
+            const Tab(text: 'Infos', icon: Icon(Icons.info)),
+            const Tab(text: 'Traitements', icon: Icon(Icons.medication)),
+            const Tab(text: 'Vaccins', icon: Icon(Icons.vaccines)),
+            const Tab(text: 'Consultations', icon: Icon(Icons.medical_services)),
+            if (_animal.estBebe)
+              const Tab(text: 'Poids', icon: Icon(Icons.monitor_weight)),
           ],
         ),
       ),
@@ -84,6 +89,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
           _buildTraitementsTab(),
           _buildVaccinsTab(),
           _buildConsultationsTab(),
+          if (_animal.estBebe) _buildPoidsTab(),
         ],
       ),
     );
@@ -412,6 +418,117 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
             onPressed: () => _addConsultation(),
             icon: const Icon(Icons.add),
             label: const Text('Ajouter une consultation'),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPoidsTab() {
+    final mesures = List<MesurePoids>.from(_animal.historiquePoids)
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    return Column(
+      children: [
+        // Carte récapitulative
+        if (_animal.dernierPoids != null)
+          Card(
+            margin: const EdgeInsets.all(16),
+            color: Colors.teal[50],
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Column(
+                        children: [
+                          const Icon(Icons.monitor_weight, size: 32, color: Colors.teal),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${_animal.dernierPoids!.poids} kg',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Text('Dernier poids'),
+                        ],
+                      ),
+                      Column(
+                        children: [
+                          const Icon(Icons.calendar_today, size: 32, color: Colors.teal),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${_animal.ageEnMois} mois',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Text('Âge'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        // Liste des mesures (aperçu)
+        Expanded(
+          child: mesures.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.monitor_weight, size: 80, color: Colors.grey[300]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Aucune mesure de poids',
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: mesures.length > 3 ? 3 : mesures.length,
+                  itemBuilder: (context, index) {
+                    final mesure = mesures[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: Colors.teal,
+                          child: Icon(Icons.monitor_weight, color: Colors.white),
+                        ),
+                        title: Text('${mesure.poids} kg'),
+                        subtitle: Text(DateFormat('dd/MM/yyyy').format(mesure.date)),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        // Bouton pour voir toutes les mesures
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AnimalPoidsScreen(animal: _animal),
+                ),
+              );
+              _reloadAnimal();
+            },
+            icon: const Icon(Icons.analytics),
+            label: Text(mesures.isEmpty ? 'Commencer le suivi' : 'Voir le suivi complet'),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(double.infinity, 48),
             ),

@@ -14,6 +14,7 @@ class Animal {
   final List<Vaccin> vaccins;
   final List<ConsultationVeterinaire> consultations;
   final List<Maladie> maladies;
+  final List<MesurePoids> historiquePoids;
   final String? notes;
 
   Animal({
@@ -32,6 +33,7 @@ class Animal {
     this.vaccins = const [],
     this.consultations = const [],
     this.maladies = const [],
+    this.historiquePoids = const [],
     this.notes,
   });
 
@@ -43,6 +45,34 @@ class Animal {
       age--;
     }
     return age;
+  }
+
+  // Détermine si l'animal est un bébé (moins de 1 an)
+  // Uniquement pour chèvres, moutons et chevaux
+  bool get estBebe {
+    final especesConcernees = ['chèvre', 'mouton', 'cheval'];
+    if (!especesConcernees.contains(espece.toLowerCase())) {
+      return false;
+    }
+    return age < 1;
+  }
+
+  // Âge en mois pour les bébés
+  int get ageEnMois {
+    final now = DateTime.now();
+    int mois = (now.year - dateNaissance.year) * 12 + now.month - dateNaissance.month;
+    if (now.day < dateNaissance.day) {
+      mois--;
+    }
+    return mois;
+  }
+
+  // Dernière mesure de poids
+  MesurePoids? get dernierPoids {
+    if (historiquePoids.isEmpty) return null;
+    final sorted = List<MesurePoids>.from(historiquePoids)
+      ..sort((a, b) => b.date.compareTo(a.date));
+    return sorted.first;
   }
 
   List<Traitement> get traitementsEnCours {
@@ -83,6 +113,7 @@ class Animal {
       'vaccins': vaccins.map((v) => v.toJson()).toList(),
       'consultations': consultations.map((c) => c.toJson()).toList(),
       'maladies': maladies.map((m) => m.toJson()).toList(),
+      'historiquePoids': historiquePoids.map((p) => p.toJson()).toList(),
       'notes': notes,
     };
   }
@@ -116,6 +147,10 @@ class Animal {
               ?.map((m) => Maladie.fromJson(m))
               .toList() ??
           [],
+      historiquePoids: (json['historiquePoids'] as List?)
+              ?.map((p) => MesurePoids.fromJson(p))
+              .toList() ??
+          [],
       notes: json['notes'],
     );
   }
@@ -136,6 +171,7 @@ class Animal {
     List<Vaccin>? vaccins,
     List<ConsultationVeterinaire>? consultations,
     List<Maladie>? maladies,
+    List<MesurePoids>? historiquePoids,
     String? notes,
   }) {
     return Animal(
@@ -154,6 +190,7 @@ class Animal {
       vaccins: vaccins ?? this.vaccins,
       consultations: consultations ?? this.consultations,
       maladies: maladies ?? this.maladies,
+      historiquePoids: historiquePoids ?? this.historiquePoids,
       notes: notes ?? this.notes,
     );
   }
@@ -351,6 +388,38 @@ class Maladie {
           ? DateTime.parse(json['dateGuerison'])
           : null,
       traitement: json['traitement'],
+      notes: json['notes'],
+    );
+  }
+}
+
+class MesurePoids {
+  final String id;
+  final DateTime date;
+  final double poids; // en kg
+  final String? notes;
+
+  MesurePoids({
+    required this.id,
+    required this.date,
+    required this.poids,
+    this.notes,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'date': date.toIso8601String(),
+      'poids': poids,
+      'notes': notes,
+    };
+  }
+
+  factory MesurePoids.fromJson(Map<String, dynamic> json) {
+    return MesurePoids(
+      id: json['id'],
+      date: DateTime.parse(json['date']),
+      poids: json['poids'].toDouble(),
       notes: json['notes'],
     );
   }

@@ -53,7 +53,17 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     _notesController = TextEditingController(text: widget.animal?.notes ?? '');
     _dateNaissance = widget.animal?.dateNaissance;
     _sexe = widget.animal?.sexe;
-    _espece = widget.animal?.espece;
+    // Normaliser l'espèce pour correspondre à la liste (majuscule)
+    if (widget.animal?.espece != null) {
+      try {
+        _espece = _especesSuggestions.firstWhere(
+          (e) => e.toLowerCase() == widget.animal!.espece.toLowerCase(),
+        );
+      } catch (e) {
+        // Si l'espèce n'existe pas dans la liste, on prend la première par défaut
+        _espece = _especesSuggestions.first;
+      }
+    }
     _photoPath = widget.animal?.photoPath;
     _pereId = widget.animal?.pereId;
     _mereId = widget.animal?.mereId;
@@ -120,6 +130,21 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         ),
       ),
     );
+  }
+
+  bool _estBebe() {
+    if (_espece == null || _dateNaissance == null) return false;
+
+    final especesConcernees = ['Chèvre', 'Mouton', 'Cheval'];
+    if (!especesConcernees.contains(_espece)) return false;
+
+    final now = DateTime.now();
+    int age = now.year - _dateNaissance!.year;
+    if (now.month < _dateNaissance!.month ||
+        (now.month == _dateNaissance!.month && now.day < _dateNaissance!.day)) {
+      age--;
+    }
+    return age < 1;
   }
 
   @override
@@ -222,6 +247,32 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 return null;
               },
             ),
+            if (_espece != null && _dateNaissance != null && _estBebe())
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.purple[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.monitor_weight, color: Colors.purple[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Le suivi du poids sera activé pour ce bébé',
+                        style: TextStyle(
+                          color: Colors.purple[700],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _raceController,
