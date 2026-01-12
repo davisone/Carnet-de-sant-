@@ -162,10 +162,15 @@ class _HomeScreenState extends State<HomeScreen> {
       .where((c) => c.date.isAfter(debutMois))
       .length;
 
-    // Répartition par espèce
+    // Répartition par espèce (normalisée pour éviter les doublons majuscule/minuscule)
     final especesMap = <String, int>{};
     for (var animal in _animaux) {
-      especesMap[animal.espece] = (especesMap[animal.espece] ?? 0) + 1;
+      // Normaliser : première lettre en majuscule, reste en minuscule
+      final especeNormalisee = animal.espece.trim();
+      final especeCapitalisee = especeNormalisee.isNotEmpty
+          ? '${especeNormalisee[0].toUpperCase()}${especeNormalisee.substring(1).toLowerCase()}'
+          : especeNormalisee;
+      especesMap[especeCapitalisee] = (especesMap[especeCapitalisee] ?? 0) + 1;
     }
     final especesTopTrois = especesMap.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -564,8 +569,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ).toList();
     }
 
-    // Récupérer toutes les espèces uniques
-    final especesUniques = ['Tous', ..._animaux.map((a) => a.espece).toSet().toList()..sort()];
+    // Récupérer toutes les espèces uniques (normalisées)
+    final especesUniques = [
+      'Tous',
+      ..._animaux.map((a) {
+        final especeNormalisee = a.espece.trim();
+        return especeNormalisee.isNotEmpty
+            ? '${especeNormalisee[0].toUpperCase()}${especeNormalisee.substring(1).toLowerCase()}'
+            : especeNormalisee;
+      }).toSet().toList()..sort()
+    ];
 
     return Column(
       children: [
@@ -678,9 +691,47 @@ class _HomeScreenState extends State<HomeScreen> {
     final hasTraitement = animal.traitementsEnCours.isNotEmpty;
     final prochainVaccin = animal.prochainVaccin;
 
+    // Construire le sous-titre avec les infos
+    String subtitle = '${animal.espece} - ${animal.ageComplet}';
+    if (hasTraitement) {
+      subtitle += '\n${animal.traitementsEnCours.length} traitement${animal.traitementsEnCours.length > 1 ? 's' : ''} en cours';
+    }
+    if (prochainVaccin != null) {
+      subtitle += '\nVaccin le ${DateFormat('dd/MM/yyyy').format(prochainVaccin.dateRappel!)}';
+    }
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      child: InkWell(
+      child: ListTile(
+        leading: CircleAvatar(
+          radius: 30,
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          backgroundImage: animal.photoPath != null
+              ? FileImage(File(animal.photoPath!))
+              : null,
+          child: animal.photoPath == null
+              ? Icon(
+                  _getAnimalIcon(animal.espece),
+                  size: 32,
+                  color: Theme.of(context).colorScheme.primary,
+                )
+              : null,
+        ),
+        title: Text(
+          animal.nom,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right),
         onTap: () async {
           final result = await Navigator.push(
             context,
@@ -692,89 +743,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _loadAnimaux();
           }
         },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                backgroundImage: animal.photoPath != null
-                    ? FileImage(File(animal.photoPath!))
-                    : null,
-                child: animal.photoPath == null
-                    ? Icon(
-                        _getAnimalIcon(animal.espece),
-                        size: 32,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      animal.nom,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '${animal.espece} - ${animal.ageComplet}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    if (hasTraitement || prochainVaccin != null)
-                      const SizedBox(height: 4),
-                    if (hasTraitement)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.medication,
-                            size: 16,
-                            color: Colors.orange[700],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${animal.traitementsEnCours.length} traitement${animal.traitementsEnCours.length > 1 ? 's' : ''} en cours',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    if (prochainVaccin != null)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.vaccines,
-                            size: 16,
-                            color: Colors.blue[700],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Vaccin le ${DateFormat('dd/MM/yyyy').format(prochainVaccin.dateRappel!)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -820,8 +788,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ).toList();
     }
 
-    // Récupérer toutes les espèces uniques
-    final especesUniques = ['Tous', ..._animaux.map((a) => a.espece).toSet().toList()..sort()];
+    // Récupérer toutes les espèces uniques (normalisées)
+    final especesUniques = [
+      'Tous',
+      ..._animaux.map((a) {
+        final especeNormalisee = a.espece.trim();
+        return especeNormalisee.isNotEmpty
+            ? '${especeNormalisee[0].toUpperCase()}${especeNormalisee.substring(1).toLowerCase()}'
+            : especeNormalisee;
+      }).toSet().toList()..sort()
+    ];
 
     return Column(
       children: [
@@ -986,7 +962,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   },
                                 )
                               : CircleAvatar(
-                                  radius: 25,
+                                  radius: 30,
                                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                                   backgroundImage: animal.photoPath != null
                                       ? FileImage(File(animal.photoPath!))
@@ -994,7 +970,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: animal.photoPath == null
                                       ? Icon(
                                           _getAnimalIcon(animal.espece),
-                                          size: 28,
+                                          size: 32,
                                           color: Theme.of(context).colorScheme.primary,
                                         )
                                       : null,
@@ -1092,8 +1068,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ).toList();
     }
 
-    // Récupérer toutes les espèces uniques
-    final especesUniques = ['Tous', ..._animaux.map((a) => a.espece).toSet().toList()..sort()];
+    // Récupérer toutes les espèces uniques (normalisées)
+    final especesUniques = [
+      'Tous',
+      ..._animaux.map((a) {
+        final especeNormalisee = a.espece.trim();
+        return especeNormalisee.isNotEmpty
+            ? '${especeNormalisee[0].toUpperCase()}${especeNormalisee.substring(1).toLowerCase()}'
+            : especeNormalisee;
+      }).toSet().toList()..sort()
+    ];
 
     return Column(
       children: [
@@ -1258,7 +1242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   },
                                 )
                               : CircleAvatar(
-                                  radius: 25,
+                                  radius: 30,
                                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                                   backgroundImage: animal.photoPath != null
                                       ? FileImage(File(animal.photoPath!))
@@ -1266,7 +1250,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: animal.photoPath == null
                                       ? Icon(
                                           _getAnimalIcon(animal.espece),
-                                          size: 28,
+                                          size: 32,
                                           color: Theme.of(context).colorScheme.primary,
                                         )
                                       : null,
@@ -1364,8 +1348,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ).toList();
     }
 
-    // Récupérer toutes les espèces uniques
-    final especesUniques = ['Tous', ..._animaux.map((a) => a.espece).toSet().toList()..sort()];
+    // Récupérer toutes les espèces uniques (normalisées)
+    final especesUniques = [
+      'Tous',
+      ..._animaux.map((a) {
+        final especeNormalisee = a.espece.trim();
+        return especeNormalisee.isNotEmpty
+            ? '${especeNormalisee[0].toUpperCase()}${especeNormalisee.substring(1).toLowerCase()}'
+            : especeNormalisee;
+      }).toSet().toList()..sort()
+    ];
 
     return Column(
       children: [
@@ -1530,7 +1522,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   },
                                 )
                               : CircleAvatar(
-                                  radius: 25,
+                                  radius: 30,
                                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                                   backgroundImage: animal.photoPath != null
                                       ? FileImage(File(animal.photoPath!))
@@ -1538,7 +1530,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: animal.photoPath == null
                                       ? Icon(
                                           _getAnimalIcon(animal.espece),
-                                          size: 28,
+                                          size: 32,
                                           color: Theme.of(context).colorScheme.primary,
                                         )
                                       : null,
@@ -2225,15 +2217,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(_getAnimalIcon(entry.key), size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            entry.key,
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                        ],
+                      Text(
+                        entry.key,
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       Text(
                         '${entry.value} ($pourcentage%)',
@@ -2318,21 +2304,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   IconData _getAnimalIcon(String espece) {
-    switch (espece.toLowerCase()) {
-      case 'chien':
-        return Icons.pets;
-      case 'chat':
-        return Icons.pets;
-      case 'lapin':
-        return Icons.cruelty_free;
-      case 'oiseau':
-        return Icons.flutter_dash;
-      case 'chèvre':
-      case 'mouton':
-      case 'cheval':
-        return Icons.cruelty_free;
-      default:
-        return Icons.pets;
-    }
+    // Icône patte par défaut pour tous les animaux
+    return Icons.pets;
   }
 }

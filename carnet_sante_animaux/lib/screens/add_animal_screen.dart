@@ -24,6 +24,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   late TextEditingController _couleurController;
   late TextEditingController _numeroIdController;
   late TextEditingController _notesController;
+  late TextEditingController _poidsController;
 
   DateTime? _dateNaissance;
   String? _sexe;
@@ -51,6 +52,9 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     _numeroIdController =
         TextEditingController(text: widget.animal?.numeroIdentification ?? '');
     _notesController = TextEditingController(text: widget.animal?.notes ?? '');
+    _poidsController = TextEditingController(
+      text: widget.animal?.dernierPoids?.poids.toString() ?? '',
+    );
     _dateNaissance = widget.animal?.dateNaissance;
     _sexe = widget.animal?.sexe;
     // Normaliser l'espèce pour correspondre à la liste (majuscule)
@@ -156,6 +160,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     _couleurController.dispose();
     _numeroIdController.dispose();
     _notesController.dispose();
+    _poidsController.dispose();
     super.dispose();
   }
 
@@ -336,6 +341,31 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               },
             ),
             const SizedBox(height: 16),
+            TextFormField(
+              controller: _poidsController,
+              enabled: _estBebe(),
+              decoration: InputDecoration(
+                labelText: 'Poids (kg)',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.monitor_weight),
+                hintText: _estBebe() ? 'Ex: 3.5' : 'Disponible pour les bébés uniquement',
+                suffixText: 'kg',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (_estBebe() && value != null && value.isNotEmpty) {
+                  final poids = double.tryParse(value);
+                  if (poids == null) {
+                    return 'Veuillez entrer un nombre valide';
+                  }
+                  if (poids <= 0) {
+                    return 'Le poids doit être positif';
+                  }
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: () {
                 // Vérifier que le père existe dans la liste des mâles
@@ -460,10 +490,42 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         return;
       }
 
+      // Préparer l'historique de poids
+      final historiquePoids = <MesurePoids>[];
+      if (widget.animal != null) {
+        // Si on modifie un animal existant, on garde son historique
+        historiquePoids.addAll(widget.animal!.historiquePoids);
+      }
+
+      // Ajouter un nouveau poids si c'est un bébé et qu'un poids est renseigné
+      if (_estBebe() && _poidsController.text.isNotEmpty) {
+        final poids = double.tryParse(_poidsController.text);
+        if (poids != null) {
+          // Si on crée un nouvel animal ou si le poids a changé, on ajoute une nouvelle mesure
+          if (widget.animal == null ||
+              widget.animal!.dernierPoids?.poids != poids) {
+            historiquePoids.add(
+              MesurePoids(
+                id: const Uuid().v4(),
+                date: DateTime.now(),
+                poids: poids,
+                notes: null,
+              ),
+            );
+          }
+        }
+      }
+
+      // Normaliser l'espèce (première lettre en majuscule)
+      final especeNormalisee = _espece!.trim();
+      final especeCapitalisee = especeNormalisee.isNotEmpty
+          ? '${especeNormalisee[0].toUpperCase()}${especeNormalisee.substring(1).toLowerCase()}'
+          : especeNormalisee;
+
       final animal = Animal(
         id: widget.animal?.id ?? const Uuid().v4(),
         nom: _nomController.text,
-        espece: _espece!,
+        espece: especeCapitalisee,
         race: _raceController.text,
         dateNaissance: _dateNaissance!,
         sexe: _sexe,
@@ -480,6 +542,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         traitements: widget.animal?.traitements ?? [],
         vaccins: widget.animal?.vaccins ?? [],
         consultations: widget.animal?.consultations ?? [],
+        maladies: widget.animal?.maladies ?? [],
+        historiquePoids: historiquePoids,
       );
 
       await _animalService.saveAnimal(animal);

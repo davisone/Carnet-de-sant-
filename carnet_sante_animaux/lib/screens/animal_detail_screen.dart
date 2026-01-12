@@ -40,7 +40,19 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
   Future<void> _reloadAnimal() async {
     final animal = await _animalService.getAnimal(_animal.id);
     if (animal != null) {
-      setState(() => _animal = animal);
+      final oldEstBebe = _animal.estBebe;
+      final newEstBebe = animal.estBebe;
+
+      setState(() {
+        _animal = animal;
+
+        // Si le statut bébé a changé, recréer le TabController
+        if (oldEstBebe != newEstBebe) {
+          _tabController.dispose();
+          final nombreOnglets = _animal.estBebe ? 5 : 4;
+          _tabController = TabController(length: nombreOnglets, vsync: this);
+        }
+      });
     }
   }
 
