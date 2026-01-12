@@ -10,6 +10,7 @@ import 'animal_traitements_screen.dart';
 import 'animal_vaccins_screen.dart';
 import 'animal_maladies_screen.dart';
 import 'animal_poids_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -82,6 +83,18 @@ class _HomeScreenState extends State<HomeScreen> {
               _loadAnimaux();
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Paramètres',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
+          ),
         ],
       ),
       body: _selectedIndex == 0
@@ -138,6 +151,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
     final bebes = _animaux.where((a) => a.estBebe).toList();
 
+    // Nouvelles statistiques
+    final maladiesActives = _animaux.where((a) =>
+      a.maladies.any((m) => !m.estGuerite)
+    ).toList();
+
+    final now = DateTime.now();
+    final debutMois = DateTime(now.year, now.month, 1);
+    final consultationsMois = _animaux.expand((a) => a.consultations)
+      .where((c) => c.date.isAfter(debutMois))
+      .length;
+
+    // Répartition par espèce
+    final especesMap = <String, int>{};
+    for (var animal in _animaux) {
+      especesMap[animal.espece] = (especesMap[animal.espece] ?? 0) + 1;
+    }
+    final especesTopTrois = especesMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    // Prochains événements (7 jours)
+    final prochainEvenements = _getProchainEvenements();
+
     return RefreshIndicator(
       onRefresh: _loadAnimaux,
       child: ListView(
@@ -157,6 +192,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
           ),
           const SizedBox(height: 24),
+
+          // Indicateur de santé globale
+          _buildHealthIndicator(context, vaccinsUrgents, maladiesActives),
+          const SizedBox(height: 16),
+
+          // Statistiques principales
           Row(
             children: [
               Expanded(
@@ -199,6 +240,21 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: _buildStatCard(
                   context,
+                  title: 'Maladies actives',
+                  value: '${maladiesActives.length}',
+                  icon: Icons.health_and_safety,
+                  color: Colors.red,
+                  onTap: () => setState(() => _selectedIndex = 4),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  context,
                   title: 'Bébés',
                   value: '${bebes.length}',
                   icon: Icons.child_care,
@@ -208,8 +264,45 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  title: 'Consultations (mois)',
+                  value: '$consultationsMois',
+                  icon: Icons.medical_services,
+                  color: Colors.cyan,
+                  onTap: null,
+                ),
+              ),
             ],
           ),
+
+          // Répartition par espèce
+          if (especesTopTrois.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Répartition par espèce',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            _buildEspecesRepartition(context, especesTopTrois),
+          ],
+
+          // Prochains événements
+          if (prochainEvenements.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Prochains événements (7 jours)',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            _buildProchainEvenementsSection(context, prochainEvenements),
+          ],
           if (vaccinsUrgents.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text(
@@ -2011,6 +2104,219 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Récupérer les prochains événements (vaccins et traitements) sur 7 jours
+  List<Map<String, dynamic>> _getProchainEvenements() {
+    final maintenant = DateTime.now();
+    final dansSeptJours = maintenant.add(const Duration(days: 7));
+    List<Map<String, dynamic>> evenements = [];
+
+    for (var animal in _animaux) {
+      // Ajouter les vaccins à venir
+      if (animal.prochainVaccin != null &&
+          animal.prochainVaccin!.dateRappel != null) {
+        final dateRappel = animal.prochainVaccin!.dateRappel!;
+        if (dateRappel.isAfter(maintenant) && dateRappel.isBefore(dansSeptJours)) {
+          evenements.add({
+            'type': 'vaccin',
+            'animal': animal,
+            'date': dateRappel,
+            'nom': animal.prochainVaccin!.nom,
+            'icon': Icons.vaccines,
+            'color': Colors.blue,
+          });
+        }
+      }
+
+      // Ajouter les fins de traitement
+      for (var traitement in animal.traitementsEnCours) {
+        if (traitement.dateFin != null) {
+          final dateFin = traitement.dateFin!;
+          if (dateFin.isAfter(maintenant) && dateFin.isBefore(dansSeptJours)) {
+            evenements.add({
+              'type': 'traitement',
+              'animal': animal,
+              'date': dateFin,
+              'nom': traitement.nom,
+              'icon': Icons.medication,
+              'color': Colors.orange,
+            });
+          }
+        }
+      }
+    }
+
+    // Trier par date
+    evenements.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
+    return evenements;
+  }
+
+  // Widget indicateur de santé globale
+  Widget _buildHealthIndicator(BuildContext context, List<Animal> vaccinsUrgents, List<Animal> maladiesActives) {
+    String status;
+    Color statusColor;
+    IconData statusIcon;
+    String message;
+
+    if (vaccinsUrgents.isNotEmpty || maladiesActives.length >= 3) {
+      status = 'Attention requise';
+      statusColor = Colors.red;
+      statusIcon = Icons.warning;
+      message = 'Vous avez ${vaccinsUrgents.length} vaccin(s) urgent(s) et ${maladiesActives.length} animal/animaux malade(s)';
+    } else if (maladiesActives.isNotEmpty || vaccinsUrgents.length > 0) {
+      status = 'Surveillance nécessaire';
+      statusColor = Colors.orange;
+      statusIcon = Icons.info;
+      message = 'Quelques points nécessitent votre attention';
+    } else {
+      status = 'Tout va bien !';
+      statusColor = Colors.green;
+      statusIcon = Icons.check_circle;
+      message = 'Tous vos animaux sont en bonne santé';
+    }
+
+    return Card(
+      color: statusColor.withOpacity(0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(statusIcon, color: statusColor, size: 40),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    status,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    message,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget répartition par espèce
+  Widget _buildEspecesRepartition(BuildContext context, List<MapEntry<String, int>> especes) {
+    final total = _animaux.length;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: especes.take(5).map((entry) {
+            final pourcentage = (entry.value / total * 100).round();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(_getAnimalIcon(entry.key), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            entry.key,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '${entry.value} ($pourcentage%)',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  LinearProgressIndicator(
+                    value: entry.value / total,
+                    backgroundColor: Colors.grey[200],
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // Widget section prochains événements
+  Widget _buildProchainEvenementsSection(BuildContext context, List<Map<String, dynamic>> evenements) {
+    return Card(
+      child: Column(
+        children: evenements.take(5).map((event) {
+          final animal = event['animal'] as Animal;
+          final date = event['date'] as DateTime;
+          final jours = date.difference(DateTime.now()).inDays;
+
+          String dateText;
+          if (jours == 0) {
+            dateText = 'Aujourd\'hui';
+          } else if (jours == 1) {
+            dateText = 'Demain';
+          } else {
+            dateText = 'Dans $jours jours';
+          }
+
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor: (event['color'] as Color).withOpacity(0.2),
+              child: Icon(
+                event['icon'] as IconData,
+                color: event['color'] as Color,
+              ),
+            ),
+            title: Text(animal.nom),
+            subtitle: Text('${event['nom']} - ${DateFormat('dd/MM').format(date)}'),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: (event['color'] as Color).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                dateText,
+                style: TextStyle(
+                  color: event['color'] as Color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AnimalDetailScreen(animal: animal),
+                ),
+              );
+              _loadAnimaux();
+            },
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   IconData _getAnimalIcon(String espece) {
     switch (espece.toLowerCase()) {
       case 'chien':
@@ -2021,6 +2327,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return Icons.cruelty_free;
       case 'oiseau':
         return Icons.flutter_dash;
+      case 'chèvre':
+      case 'mouton':
+      case 'cheval':
+        return Icons.cruelty_free;
       default:
         return Icons.pets;
     }

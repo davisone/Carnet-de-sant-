@@ -2,10 +2,12 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/animal.dart';
+import 'notification_service.dart';
 
 class FirebaseAnimalService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final NotificationService _notificationService = NotificationService();
   static const String _collection = 'animaux';
 
   // Récupère tous les animaux
@@ -51,9 +53,58 @@ class FirebaseAnimalService {
       data.remove('id'); // On ne sauvegarde pas l'ID dans les données
 
       await _firestore.collection(_collection).doc(animal.id).set(data);
+
+      // Planifier les notifications après la sauvegarde
+      await _scheduleNotificationsForAnimal(animal);
     } catch (e) {
       print('Erreur lors de la sauvegarde de l\'animal: $e');
       rethrow;
+    }
+  }
+
+  // Planifie toutes les notifications pour un animal
+  Future<void> _scheduleNotificationsForAnimal(Animal animal) async {
+    try {
+      // 1. Notifications pour les vaccins
+      for (final vaccin in animal.vaccins) {
+        if (vaccin.dateRappel != null && vaccin.dateRappel!.isAfter(DateTime.now())) {
+          await _notificationService.scheduleVaccineReminder(
+            animalId: animal.id,
+            animalName: animal.nom,
+            vaccineName: vaccin.nom,
+            dateRappel: vaccin.dateRappel!,
+          );
+        }
+      }
+
+      // 2. Notifications pour les traitements
+      for (final traitement in animal.traitements) {
+        if (traitement.dateFin != null &&
+            traitement.dateFin!.isAfter(DateTime.now()) &&
+            traitement.estEnCours) {
+          await _notificationService.scheduleTreatmentEndReminder(
+            animalId: animal.id,
+            animalName: animal.nom,
+            treatmentName: traitement.nom,
+            dateFin: traitement.dateFin!,
+          );
+        }
+      }
+
+      // 3. Notifications pour la pesée des bébés
+      if (animal.estBebe && animal.dernierPoids != null) {
+        // Planifier une pesée hebdomadaire
+        final nextWeighingDate = animal.dernierPoids!.date.add(const Duration(days: 7));
+        if (nextWeighingDate.isAfter(DateTime.now())) {
+          await _notificationService.scheduleBabyWeightReminder(
+            animalId: animal.id,
+            animalName: animal.nom,
+            nextWeighingDate: nextWeighingDate,
+          );
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de la planification des notifications: $e');
     }
   }
 

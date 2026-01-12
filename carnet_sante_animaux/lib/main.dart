@@ -2,10 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'screens/home_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialiser Firebase
   await Firebase.initializeApp();
+
+  // Initialiser le service de notifications
+  await NotificationService().initialize();
+
+  // Demander les permissions pour les notifications
+  await NotificationService().requestPermissions();
+
   runApp(const CarnetSanteApp());
 }
 
