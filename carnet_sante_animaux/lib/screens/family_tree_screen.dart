@@ -322,7 +322,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                   ),
                 ),
               Text(
-                '${animal.age} an${animal.age > 1 ? 's' : ''}',
+                animal.ageComplet,
                 style: const TextStyle(fontSize: 12),
               ),
             ],

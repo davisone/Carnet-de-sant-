@@ -47,6 +47,30 @@ class Animal {
     return age;
   }
 
+  // Retourne l'âge formaté avec années et mois (ex: "2 ans 3 mois")
+  String get ageComplet {
+    final now = DateTime.now();
+    int annees = now.year - dateNaissance.year;
+    int mois = now.month - dateNaissance.month;
+
+    if (now.day < dateNaissance.day) {
+      mois--;
+    }
+
+    if (mois < 0) {
+      annees--;
+      mois += 12;
+    }
+
+    if (annees == 0) {
+      return '$mois mois';
+    } else if (mois == 0) {
+      return '$annees an${annees > 1 ? 's' : ''}';
+    } else {
+      return '$annees an${annees > 1 ? 's' : ''} $mois mois';
+    }
+  }
+
   // Détermine si l'animal est un bébé (moins de 1 an)
   // Uniquement pour chèvres, moutons et chevaux
   bool get estBebe {

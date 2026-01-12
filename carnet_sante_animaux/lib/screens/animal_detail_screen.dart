@@ -130,7 +130,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
                   'Date de naissance',
                   DateFormat('dd/MM/yyyy').format(_animal.dateNaissance),
                 ),
-                _buildInfoRow('Âge', '${_animal.age} an${_animal.age > 1 ? 's' : ''}'),
+                _buildInfoRow('Âge', _animal.ageComplet),
                 if (_animal.sexe != null) _buildInfoRow('Sexe', _animal.sexe!),
                 if (_animal.couleur != null)
                   _buildInfoRow('Couleur', _animal.couleur!),

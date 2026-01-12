@@ -176,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return RefreshIndicator(
       onRefresh: _loadAnimaux,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
           Text(
             'Bienvenue !',
@@ -661,7 +661,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : RefreshIndicator(
                   onRefresh: _loadAnimaux,
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 80),
                     itemCount: animauxFiltres.length,
                     itemBuilder: (context, index) {
                       final animal = animauxFiltres[index];
@@ -724,7 +724,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     Text(
-                      '${animal.espece} - ${animal.age} an${animal.age > 1 ? 's' : ''}',
+                      '${animal.espece} - ${animal.ageComplet}',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -960,7 +960,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : RefreshIndicator(
                   onRefresh: _loadAnimaux,
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 80),
                     itemCount: animauxFiltres.length,
                     itemBuilder: (context, index) {
                       final animal = animauxFiltres[index];
@@ -1232,7 +1232,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : RefreshIndicator(
                   onRefresh: _loadAnimaux,
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 80),
                     itemCount: animauxFiltres.length,
                     itemBuilder: (context, index) {
                       final animal = animauxFiltres[index];
@@ -1504,7 +1504,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : RefreshIndicator(
                   onRefresh: _loadAnimaux,
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 80),
                     itemCount: animauxFiltres.length,
                     itemBuilder: (context, index) {
                       final animal = animauxFiltres[index];

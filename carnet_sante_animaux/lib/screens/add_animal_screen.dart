@@ -72,9 +72,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
 
   Future<void> _loadAnimaux() async {
     final animaux = await _animalService.getAnimaux();
-    setState(() {
-      _animaux = animaux;
-    });
+    if (mounted) {
+      setState(() {
+        _animaux = animaux;
+      });
+    }
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -335,7 +337,14 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _pereId,
+              value: () {
+                // Vérifier que le père existe dans la liste des mâles
+                final pereExists = _animaux.any((a) =>
+                    a.id == _pereId &&
+                    a.sexe == 'Mâle' &&
+                    a.id != widget.animal?.id);
+                return pereExists ? _pereId : null;
+              }(),
               decoration: const InputDecoration(
                 labelText: 'Père',
                 border: OutlineInputBorder(),
@@ -362,7 +371,14 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _mereId,
+              value: () {
+                // Vérifier que la mère existe dans la liste des femelles
+                final mereExists = _animaux.any((a) =>
+                    a.id == _mereId &&
+                    a.sexe == 'Femelle' &&
+                    a.id != widget.animal?.id);
+                return mereExists ? _mereId : null;
+              }(),
               decoration: const InputDecoration(
                 labelText: 'Mère',
                 border: OutlineInputBorder(),
