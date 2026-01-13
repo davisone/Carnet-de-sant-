@@ -448,3 +448,87 @@ class MesurePoids {
     );
   }
 }
+
+class Saillie {
+  final String id;
+  final String mereId; // ID de la mère
+  final String pereId; // ID du père
+  final DateTime dateSaillie;
+  final String type; // 'naturelle' ou 'artificielle'
+  final String statut; // 'en_attente', 'reussie', 'echouee'
+  final DateTime? dateMiseBas;
+  final int? nombreBebes;
+  final List<String> bebesIds; // IDs des bébés nés
+  final String? notes;
+
+  Saillie({
+    required this.id,
+    required this.mereId,
+    required this.pereId,
+    required this.dateSaillie,
+    required this.type,
+    this.statut = 'en_attente',
+    this.dateMiseBas,
+    this.nombreBebes,
+    this.bebesIds = const [],
+    this.notes,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'mereId': mereId,
+      'pereId': pereId,
+      'dateSaillie': dateSaillie.toIso8601String(),
+      'type': type,
+      'statut': statut,
+      'dateMiseBas': dateMiseBas?.toIso8601String(),
+      'nombreBebes': nombreBebes,
+      'bebesIds': bebesIds,
+      'notes': notes,
+    };
+  }
+
+  factory Saillie.fromJson(Map<String, dynamic> json) {
+    return Saillie(
+      id: json['id'],
+      mereId: json['mereId'],
+      pereId: json['pereId'],
+      dateSaillie: DateTime.parse(json['dateSaillie']),
+      type: json['type'],
+      statut: json['statut'] ?? 'en_attente',
+      dateMiseBas: json['dateMiseBas'] != null
+          ? DateTime.parse(json['dateMiseBas'])
+          : null,
+      nombreBebes: json['nombreBebes'],
+      bebesIds: (json['bebesIds'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      notes: json['notes'],
+    );
+  }
+
+  Saillie copyWith({
+    String? id,
+    String? mereId,
+    String? pereId,
+    DateTime? dateSaillie,
+    String? type,
+    String? statut,
+    DateTime? dateMiseBas,
+    int? nombreBebes,
+    List<String>? bebesIds,
+    String? notes,
+  }) {
+    return Saillie(
+      id: id ?? this.id,
+      mereId: mereId ?? this.mereId,
+      pereId: pereId ?? this.pereId,
+      dateSaillie: dateSaillie ?? this.dateSaillie,
+      type: type ?? this.type,
+      statut: statut ?? this.statut,
+      dateMiseBas: dateMiseBas ?? this.dateMiseBas,
+      nombreBebes: nombreBebes ?? this.nombreBebes,
+      bebesIds: bebesIds ?? this.bebesIds,
+      notes: notes ?? this.notes,
+    );
+  }
+}

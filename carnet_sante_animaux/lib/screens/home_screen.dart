@@ -11,6 +11,7 @@ import 'animal_vaccins_screen.dart';
 import 'animal_maladies_screen.dart';
 import 'animal_poids_screen.dart';
 import 'settings_screen.dart';
+import 'reproduction_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,7 +20,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   final FirebaseAnimalService _animalService = FirebaseAnimalService();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _searchControllerTraitements = TextEditingController();
@@ -28,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Animal> _animaux = [];
   bool _isLoading = true;
   int _selectedIndex = 0;
+  late TabController _santeTabController;
   String _filtreEspece = 'Tous';
   String _searchQuery = '';
   String _filtreEspeceTraitements = 'Tous';
@@ -42,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _santeTabController = TabController(length: 3, vsync: this);
     _loadAnimaux();
   }
 
@@ -60,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchControllerTraitements.dispose();
     _searchControllerVaccins.dispose();
     _searchControllerMaladies.dispose();
+    _santeTabController.dispose();
     super.dispose();
   }
 
@@ -102,10 +106,8 @@ class _HomeScreenState extends State<HomeScreen> {
           : _selectedIndex == 1
               ? _buildTousLesAnimaux()
               : _selectedIndex == 2
-                  ? _buildTraitementsEnCours()
-                  : _selectedIndex == 3
-                      ? _buildVaccinsAVenir()
-                      : _buildMaladies(),
+                  ? _buildSanteScreen()
+                  : const ReproductionScreen(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -121,16 +123,12 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Animaux',
           ),
           NavigationDestination(
-            icon: Icon(Icons.medication),
-            label: 'Traitements',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.vaccines),
-            label: 'Vaccins',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.health_and_safety),
-            label: 'Maladies',
+            label: 'Santé',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.favorite),
+            label: 'Reproduction',
           ),
         ],
       ),
@@ -744,6 +742,34 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
       ),
+    );
+  }
+
+  Widget _buildSanteScreen() {
+    return Column(
+      children: [
+        Container(
+          color: Theme.of(context).colorScheme.inversePrimary.withOpacity(0.1),
+          child: TabBar(
+            controller: _santeTabController,
+            tabs: const [
+              Tab(icon: Icon(Icons.medication), text: 'Traitements'),
+              Tab(icon: Icon(Icons.vaccines), text: 'Vaccins'),
+              Tab(icon: Icon(Icons.health_and_safety), text: 'Maladies'),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _santeTabController,
+            children: [
+              _buildTraitementsEnCours(),
+              _buildVaccinsAVenir(),
+              _buildMaladies(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1605,8 +1631,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Onglet Traitements en mode sélection
-    if (_selectedIndex == 2 && _selectionMode && _selectedAnimaux.isNotEmpty) {
+    // Onglet Santé - Sous-onglet Traitements en mode sélection
+    if (_selectedIndex == 2 && _santeTabController.index == 0 && _selectionMode && _selectedAnimaux.isNotEmpty) {
       return FloatingActionButton.extended(
         onPressed: _ajouterTraitementGroupe,
         icon: const Icon(Icons.medication),
@@ -1614,8 +1640,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Onglet Traitements sans sélection
-    if (_selectedIndex == 2) {
+    // Onglet Santé - Sous-onglet Traitements sans sélection
+    if (_selectedIndex == 2 && _santeTabController.index == 0) {
       return FloatingActionButton.extended(
         onPressed: () {
           setState(() {
@@ -1627,8 +1653,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Onglet Vaccins en mode sélection
-    if (_selectedIndex == 3 && _selectionMode && _selectedAnimaux.isNotEmpty) {
+    // Onglet Santé - Sous-onglet Vaccins en mode sélection
+    if (_selectedIndex == 2 && _santeTabController.index == 1 && _selectionMode && _selectedAnimaux.isNotEmpty) {
       return FloatingActionButton.extended(
         onPressed: _ajouterVaccinGroupe,
         icon: const Icon(Icons.vaccines),
@@ -1636,8 +1662,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Onglet Vaccins sans sélection
-    if (_selectedIndex == 3) {
+    // Onglet Santé - Sous-onglet Vaccins sans sélection
+    if (_selectedIndex == 2 && _santeTabController.index == 1) {
       return FloatingActionButton.extended(
         onPressed: () {
           setState(() {
@@ -1649,8 +1675,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Onglet Maladies en mode sélection
-    if (_selectedIndex == 4 && _selectionMode && _selectedAnimaux.isNotEmpty) {
+    // Onglet Santé - Sous-onglet Maladies en mode sélection
+    if (_selectedIndex == 2 && _santeTabController.index == 2 && _selectionMode && _selectedAnimaux.isNotEmpty) {
       return FloatingActionButton.extended(
         onPressed: _ajouterMaladieGroupe,
         icon: const Icon(Icons.health_and_safety),
@@ -1658,8 +1684,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Onglet Maladies sans sélection
-    if (_selectedIndex == 4) {
+    // Onglet Santé - Sous-onglet Maladies sans sélection
+    if (_selectedIndex == 2 && _santeTabController.index == 2) {
       return FloatingActionButton.extended(
         onPressed: () {
           setState(() {
