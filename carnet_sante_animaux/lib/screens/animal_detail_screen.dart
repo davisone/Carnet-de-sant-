@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../models/animal.dart';
 import '../services/firebase_animal_service.dart';
+import '../services/pdf_service.dart';
 import 'add_animal_screen.dart';
 import 'animal_poids_screen.dart';
 
@@ -20,6 +21,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final FirebaseAnimalService _animalService = FirebaseAnimalService();
+  final PdfService _pdfService = PdfService();
   late Animal _animal;
 
   @override
@@ -63,6 +65,25 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
         title: Text(_animal.nom),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'Exporter en PDF',
+            onPressed: () async {
+              try {
+                final animaux = await _animalService.getAnimaux();
+                await _pdfService.generateCarnetSante(_animal, animaux);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erreur lors de l\'export PDF: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () async {
