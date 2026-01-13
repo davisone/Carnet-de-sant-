@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../models/animal.dart';
 import '../services/firebase_animal_service.dart';
 
@@ -219,6 +220,217 @@ class _AnimalPoidsScreenState extends State<AnimalPoidsScreen> {
     return Colors.grey;
   }
 
+  Widget _buildWeightChart() {
+    if (_animal.historiquePoids.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (_animal.historiquePoids.length == 1) {
+      return Card(
+        margin: const EdgeInsets.all(16),
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: Colors.blue[700],
+                size: 40,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Graphique d\'évolution',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Ajoutez au moins une autre mesure pour voir le graphique d\'évolution du poids',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final mesures = List<MesurePoids>.from(_animal.historiquePoids)
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    // Créer les points pour le graphique
+    final spots = mesures.asMap().entries.map((entry) {
+      return FlSpot(entry.key.toDouble(), entry.value.poids);
+    }).toList();
+
+    // Calculer min et max pour l'axe Y
+    final poids = mesures.map((m) => m.poids).toList();
+    final minPoids = poids.reduce((a, b) => a < b ? a : b);
+    final maxPoids = poids.reduce((a, b) => a > b ? a : b);
+    final padding = (maxPoids - minPoids) * 0.2;
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.trending_up, color: Colors.teal[700]),
+                const SizedBox(width: 8),
+                const Text(
+                  'Évolution du poids',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: true,
+                    horizontalInterval: 1,
+                    verticalInterval: 1,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey.withOpacity(0.2),
+                        strokeWidth: 1,
+                      );
+                    },
+                    getDrawingVerticalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey.withOpacity(0.2),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 30,
+                        interval: 1,
+                        getTitlesWidget: (double value, TitleMeta meta) {
+                          if (value.toInt() >= 0 && value.toInt() < mesures.length) {
+                            final date = mesures[value.toInt()].date;
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                DateFormat('dd/MM').format(date),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: padding > 0 ? null : 1,
+                        reservedSize: 42,
+                        getTitlesWidget: (double value, TitleMeta meta) {
+                          return Text(
+                            '${value.toStringAsFixed(1)} kg',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                  ),
+                  minX: 0,
+                  maxX: (mesures.length - 1).toDouble(),
+                  minY: padding > 0 ? minPoids - padding : minPoids - 0.5,
+                  maxY: padding > 0 ? maxPoids + padding : maxPoids + 0.5,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      color: Colors.teal,
+                      barWidth: 3,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) {
+                          return FlDotCirclePainter(
+                            radius: 4,
+                            color: Colors.white,
+                            strokeWidth: 2,
+                            strokeColor: Colors.teal,
+                          );
+                        },
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: Colors.teal.withOpacity(0.1),
+                      ),
+                    ),
+                  ],
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                        return touchedBarSpots.map((barSpot) {
+                          final date = mesures[barSpot.x.toInt()].date;
+                          return LineTooltipItem(
+                            '${DateFormat('dd/MM/yyyy').format(date)}\n${barSpot.y.toStringAsFixed(1)} kg',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        }).toList();
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mesures = _animal.historiquePoids.toList()
@@ -314,6 +526,8 @@ class _AnimalPoidsScreenState extends State<AnimalPoidsScreen> {
                     ],
                   ),
                 ),
+                // Graphique d'évolution
+                _buildWeightChart(),
                 // Liste des mesures
                 Expanded(
                   child: mesures.isEmpty
