@@ -34,7 +34,11 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     _animaux = await _animalService.getAnimaux();
 
     if (widget.initialAnimal != null) {
-      _selectedAnimal = widget.initialAnimal;
+      // Trouver l'animal correspondant dans la liste pour éviter les problèmes de référence
+      _selectedAnimal = _animaux.firstWhere(
+        (a) => a.id == widget.initialAnimal!.id,
+        orElse: () => widget.initialAnimal!,
+      );
     } else if (_animaux.isNotEmpty) {
       _selectedAnimal = _animaux.first;
     }
@@ -56,8 +60,14 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   }
 
   Future<void> _selectAnimal(Animal animal) async {
+    // Trouver l'animal correspondant dans la liste pour éviter les problèmes de référence
+    final animalFromList = _animaux.firstWhere(
+      (a) => a.id == animal.id,
+      orElse: () => animal,
+    );
+
     setState(() {
-      _selectedAnimal = animal;
+      _selectedAnimal = animalFromList;
       _isLoading = true;
     });
     await _loadFamilyData();

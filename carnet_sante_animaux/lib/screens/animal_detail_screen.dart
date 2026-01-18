@@ -28,8 +28,8 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
   void initState() {
     super.initState();
     _animal = widget.animal;
-    // Ajouter un onglet Poids pour les bébés (chèvres, moutons, chevaux < 1 an)
-    final nombreOnglets = _animal.estBebe ? 5 : 4;
+    // Ajouter un onglet Poids pour les animaux avec suivi de poids (bébés ou historique existant)
+    final nombreOnglets = _animal.afficherOngletPoids ? 5 : 4;
     _tabController = TabController(length: nombreOnglets, vsync: this);
   }
 
@@ -42,16 +42,16 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
   Future<void> _reloadAnimal() async {
     final animal = await _animalService.getAnimal(_animal.id);
     if (animal != null) {
-      final oldEstBebe = _animal.estBebe;
-      final newEstBebe = animal.estBebe;
+      final oldAfficherPoids = _animal.afficherOngletPoids;
+      final newAfficherPoids = animal.afficherOngletPoids;
 
       setState(() {
         _animal = animal;
 
-        // Si le statut bébé a changé, recréer le TabController
-        if (oldEstBebe != newEstBebe) {
+        // Si l'affichage de l'onglet poids a changé, recréer le TabController
+        if (oldAfficherPoids != newAfficherPoids) {
           _tabController.dispose();
-          final nombreOnglets = _animal.estBebe ? 5 : 4;
+          final nombreOnglets = _animal.afficherOngletPoids ? 5 : 4;
           _tabController = TabController(length: nombreOnglets, vsync: this);
         }
       });
@@ -110,7 +110,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
             const Tab(text: 'Traitements', icon: Icon(Icons.medication)),
             const Tab(text: 'Vaccins', icon: Icon(Icons.vaccines)),
             const Tab(text: 'Consultations', icon: Icon(Icons.medical_services)),
-            if (_animal.estBebe)
+            if (_animal.afficherOngletPoids)
               const Tab(text: 'Poids', icon: Icon(Icons.monitor_weight)),
           ],
         ),
@@ -122,7 +122,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
           _buildTraitementsTab(),
           _buildVaccinsTab(),
           _buildConsultationsTab(),
-          if (_animal.estBebe) _buildPoidsTab(),
+          if (_animal.afficherOngletPoids) _buildPoidsTab(),
         ],
       ),
     );

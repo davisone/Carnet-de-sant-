@@ -71,15 +71,33 @@ class Animal {
     }
   }
 
+  // Vérifie si l'espèce est concernée par le suivi de poids
+  bool get estEspeceSuiviePoids {
+    final especesConcernees = ['chèvre', 'mouton', 'cheval'];
+    return especesConcernees.contains(espece.toLowerCase());
+  }
+
   // Détermine si l'animal est un bébé (moins de 1 an)
   // Uniquement pour chèvres, moutons et chevaux
   bool get estBebe {
-    final especesConcernees = ['chèvre', 'mouton', 'cheval'];
-    if (!especesConcernees.contains(espece.toLowerCase())) {
+    if (!estEspeceSuiviePoids) {
       return false;
     }
     return age < 1;
   }
+
+  // Détermine si l'onglet Poids doit être affiché
+  // Affiché si l'animal est un bébé OU s'il a un historique de poids
+  bool get afficherOngletPoids {
+    if (!estEspeceSuiviePoids) {
+      return false;
+    }
+    return estBebe || historiquePoids.isNotEmpty;
+  }
+
+  // Détermine si on peut ajouter de nouvelles mesures de poids
+  // Uniquement possible pour les bébés (< 1 an)
+  bool get peutAjouterPoids => estBebe;
 
   // Âge en mois pour les bébés
   int get ageEnMois {

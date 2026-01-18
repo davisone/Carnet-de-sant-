@@ -445,6 +445,28 @@ class _AnimalPoidsScreenState extends State<AnimalPoidsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // Banner informatif si l'animal n'est plus un bébé
+                if (!_animal.peutAjouterPoids && _animal.historiquePoids.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    color: Colors.amber[100],
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.amber[800], size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${_animal.nom} a plus d\'un an. L\'historique de poids est en consultation uniquement.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.amber[900],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 // En-tête avec photo et infos de l'animal
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -685,11 +707,13 @@ class _AnimalPoidsScreenState extends State<AnimalPoidsScreen> {
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _ajouterMesure,
-        icon: const Icon(Icons.add),
-        label: const Text('Ajouter'),
-      ),
+      floatingActionButton: _animal.peutAjouterPoids
+          ? FloatingActionButton.extended(
+              onPressed: _ajouterMesure,
+              icon: const Icon(Icons.add),
+              label: const Text('Ajouter'),
+            )
+          : null,
     );
   }
 }
