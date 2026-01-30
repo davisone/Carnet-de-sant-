@@ -478,6 +478,7 @@ class Saillie {
   final int? nombreBebes;
   final List<String> bebesIds; // IDs des bébés nés
   final String? notes;
+  final DateTime dateEnregistrement; // Date d'enregistrement dans l'app
 
   Saillie({
     required this.id,
@@ -490,7 +491,8 @@ class Saillie {
     this.nombreBebes,
     this.bebesIds = const [],
     this.notes,
-  });
+    DateTime? dateEnregistrement,
+  }) : dateEnregistrement = dateEnregistrement ?? DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
   Map<String, dynamic> toJson() {
     return {
@@ -504,6 +506,7 @@ class Saillie {
       'nombreBebes': nombreBebes,
       'bebesIds': bebesIds,
       'notes': notes,
+      'dateEnregistrement': dateEnregistrement.toIso8601String(),
     };
   }
 
@@ -521,8 +524,27 @@ class Saillie {
       nombreBebes: json['nombreBebes'],
       bebesIds: (json['bebesIds'] as List?)?.map((e) => e.toString()).toList() ?? [],
       notes: json['notes'],
+      dateEnregistrement: json['dateEnregistrement'] != null
+          ? DateTime.parse(json['dateEnregistrement'])
+          : null,
     );
   }
+
+  static const int dureeGestationJours = 147;
+
+  DateTime get dateNaissancePrevue =>
+      dateSaillie.add(const Duration(days: dureeGestationJours));
+
+  int get joursEcoules {
+    final now = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final debut = DateTime(dateSaillie.year, dateSaillie.month, dateSaillie.day);
+    return now.difference(debut).inDays;
+  }
+
+  int get joursRestantsAvantNaissance => dureeGestationJours - joursEcoules;
+
+  bool get estEnAttenteNaissance =>
+      statut == 'en_attente' && joursRestantsAvantNaissance >= 0;
 
   Saillie copyWith({
     String? id,
@@ -535,6 +557,7 @@ class Saillie {
     int? nombreBebes,
     List<String>? bebesIds,
     String? notes,
+    DateTime? dateEnregistrement,
   }) {
     return Saillie(
       id: id ?? this.id,
@@ -547,6 +570,7 @@ class Saillie {
       nombreBebes: nombreBebes ?? this.nombreBebes,
       bebesIds: bebesIds ?? this.bebesIds,
       notes: notes ?? this.notes,
+      dateEnregistrement: dateEnregistrement ?? this.dateEnregistrement,
     );
   }
 }

@@ -520,7 +520,7 @@ class _ReproductionScreenState extends State<ReproductionScreen> {
                         final mere = _getAnimalById(saillie.mereId);
                         final pere = _getAnimalById(saillie.pereId);
 
-                        Color statutColor = Colors.grey;
+                        Color statutColor = Colors.orange;
                         IconData statutIcon = Icons.hourglass_empty;
                         if (saillie.statut == 'reussie') {
                           statutColor = Colors.green;
@@ -529,6 +529,8 @@ class _ReproductionScreenState extends State<ReproductionScreen> {
                           statutColor = Colors.red;
                           statutIcon = Icons.cancel;
                         }
+
+                        final joursRestants = saillie.joursRestantsAvantNaissance;
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -544,6 +546,40 @@ class _ReproductionScreenState extends State<ReproductionScreen> {
                                 const SizedBox(height: 4),
                                 Text('Saillie : ${DateFormat('dd/MM/yyyy').format(saillie.dateSaillie)}'),
                                 Text('Type : ${saillie.type.capitalize()}'),
+                                if (saillie.statut == 'en_attente') ...[
+                                  Text(
+                                    'Naissance prévue : ${DateFormat('dd/MM/yyyy').format(saillie.dateNaissancePrevue)}',
+                                  ),
+                                  const SizedBox(height: 4),
+                                  if (joursRestants >= 0) ...[
+                                    Text(
+                                      '${saillie.joursEcoules} jour${saillie.joursEcoules > 1 ? 's' : ''} écoulé${saillie.joursEcoules > 1 ? 's' : ''} — $joursRestants jour${joursRestants > 1 ? 's' : ''} restant${joursRestants > 1 ? 's' : ''}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: joursRestants <= 7 ? Colors.red : Colors.orange,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: LinearProgressIndicator(
+                                        value: saillie.joursEcoules / Saillie.dureeGestationJours,
+                                        backgroundColor: Colors.grey[300],
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          joursRestants <= 7 ? Colors.red : Colors.orange,
+                                        ),
+                                        minHeight: 6,
+                                      ),
+                                    ),
+                                  ] else
+                                    const Text(
+                                      'Terme dépassé',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                ],
                                 if (saillie.statut == 'reussie' && saillie.dateMiseBas != null)
                                   Text('Mise bas : ${DateFormat('dd/MM/yyyy').format(saillie.dateMiseBas!)}'),
                                 if (saillie.nombreBebes != null)
