@@ -32,6 +32,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   String? _photoPath;
   String? _pereId;
   String? _mereId;
+  bool _estCastre = false;
   List<Animal> _animaux = [];
 
   final List<String> _especesSuggestions = [
@@ -57,6 +58,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
     _dateNaissance = widget.animal?.dateNaissance;
     _sexe = widget.animal?.sexe;
+    _estCastre = widget.animal?.estCastre ?? false;
     // Normaliser l'espèce pour correspondre à la liste (majuscule)
     if (widget.animal?.espece != null) {
       try {
@@ -337,9 +339,23 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 DropdownMenuItem(value: 'Femelle', child: Text('Femelle')),
               ],
               onChanged: (value) {
-                setState(() => _sexe = value);
+                setState(() {
+                  _sexe = value;
+                  if (value != 'Mâle') _estCastre = false;
+                });
               },
             ),
+            if (_sexe == 'Mâle') ...[
+              const SizedBox(height: 8),
+              SwitchListTile(
+                title: const Text('Castré'),
+                value: _estCastre,
+                onChanged: (value) {
+                  setState(() => _estCastre = value);
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
             const SizedBox(height: 16),
             TextFormField(
               controller: _poidsController,
@@ -529,6 +545,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         race: _raceController.text,
         dateNaissance: _dateNaissance!,
         sexe: _sexe,
+        estCastre: _sexe == 'Mâle' ? _estCastre : false,
         couleur: _couleurController.text.isEmpty
             ? null
             : _couleurController.text,

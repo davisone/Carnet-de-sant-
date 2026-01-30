@@ -119,7 +119,9 @@ class _ReproductionScreenState extends State<ReproductionScreen> {
 
     // Filtrer les animaux : femelles pour mères, mâles pour pères
     final femelles = _animaux.where((a) => a.sexe?.toLowerCase() == 'femelle').toList();
-    final males = _animaux.where((a) => a.sexe?.toLowerCase() == 'mâle' || a.sexe?.toLowerCase() == 'male').toList();
+    final males = _animaux.where((a) =>
+      (a.sexe?.toLowerCase() == 'mâle' || a.sexe?.toLowerCase() == 'male') && !a.estCastre
+    ).toList();
 
     // Pour les bébés, on peut prendre tous les animaux sauf mère et père
     final bebesPotentiels = _animaux.where((a) =>

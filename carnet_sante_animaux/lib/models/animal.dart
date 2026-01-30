@@ -16,6 +16,7 @@ class Animal {
   final List<Maladie> maladies;
   final List<MesurePoids> historiquePoids;
   final String? notes;
+  final bool estCastre;
 
   Animal({
     required this.id,
@@ -35,6 +36,7 @@ class Animal {
     this.maladies = const [],
     this.historiquePoids = const [],
     this.notes,
+    this.estCastre = false,
   });
 
   int get age {
@@ -157,6 +159,7 @@ class Animal {
       'maladies': maladies.map((m) => m.toJson()).toList(),
       'historiquePoids': historiquePoids.map((p) => p.toJson()).toList(),
       'notes': notes,
+      'estCastre': estCastre,
     };
   }
 
@@ -194,6 +197,7 @@ class Animal {
               .toList() ??
           [],
       notes: json['notes'],
+      estCastre: json['estCastre'] ?? false,
     );
   }
 
@@ -215,6 +219,7 @@ class Animal {
     List<Maladie>? maladies,
     List<MesurePoids>? historiquePoids,
     String? notes,
+    bool? estCastre,
   }) {
     return Animal(
       id: id ?? this.id,
@@ -234,6 +239,7 @@ class Animal {
       maladies: maladies ?? this.maladies,
       historiquePoids: historiquePoids ?? this.historiquePoids,
       notes: notes ?? this.notes,
+      estCastre: estCastre ?? this.estCastre,
     );
   }
 }
