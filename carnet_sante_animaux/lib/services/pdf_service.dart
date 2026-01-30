@@ -55,9 +55,9 @@ class PdfService {
               pw.SizedBox(height: 20),
             ],
 
-            // Traitements
+            // Vermifuges
             if (animal.traitements.isNotEmpty) ...[
-              _buildSection('Traitements', [
+              _buildSection('Vermifuges', [
                 _buildTraitementsTable(animal.traitements),
               ]),
               pw.SizedBox(height: 20),
@@ -235,7 +235,7 @@ class PdfService {
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey200),
           children: [
-            _buildTableCell('Traitement', isHeader: true),
+            _buildTableCell('Vermifuge', isHeader: true),
             _buildTableCell('Début', isHeader: true),
             _buildTableCell('Fin', isHeader: true),
             _buildTableCell('Posologie', isHeader: true),

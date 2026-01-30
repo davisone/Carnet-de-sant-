@@ -217,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Expanded(
                 child: _buildStatCard(
                   context,
-                  title: 'En traitement',
+                  title: 'Sous vermifuge',
                   value: '${animauxEnTraitement.length}',
                   icon: Icons.medication,
                   color: Colors.orange,
@@ -346,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           if (animauxEnTraitement.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text(
-              'Animaux en traitement',
+              'Animaux sous vermifuge',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -369,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   title: Text(animal.nom),
                   subtitle: Text(
-                    '${animal.traitementsEnCours.length} traitement${animal.traitementsEnCours.length > 1 ? 's' : ''} en cours',
+                    '${animal.traitementsEnCours.length} vermifuge${animal.traitementsEnCours.length > 1 ? 's' : ''} en cours',
                   ),
                   trailing: const Icon(Icons.arrow_forward),
                   onTap: () async {
@@ -387,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             if (animauxEnTraitement.length > 3)
               TextButton(
                 onPressed: () => setState(() => _selectedIndex = 2),
-                child: Text('Voir tous les traitements (${animauxEnTraitement.length})'),
+                child: Text('Voir tous les vermifuges (${animauxEnTraitement.length})'),
               ),
           ],
           if (bebes.isNotEmpty) ...[
@@ -692,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Construire le sous-titre avec les infos
     String subtitle = '${animal.espece} - ${animal.ageComplet}';
     if (hasTraitement) {
-      subtitle += '\n${animal.traitementsEnCours.length} traitement${animal.traitementsEnCours.length > 1 ? 's' : ''} en cours';
+      subtitle += '\n${animal.traitementsEnCours.length} vermifuge${animal.traitementsEnCours.length > 1 ? 's' : ''} en cours';
     }
     if (prochainVaccin != null) {
       subtitle += '\nVaccin le ${DateFormat('dd/MM/yyyy').format(prochainVaccin.dateRappel!)}';
@@ -753,7 +753,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           child: TabBar(
             controller: _santeTabController,
             tabs: const [
-              Tab(icon: Icon(Icons.medication), text: 'Traitements'),
+              Tab(icon: Icon(Icons.medication), text: 'Vermifuges'),
               Tab(icon: Icon(Icons.vaccines), text: 'Vaccins'),
               Tab(icon: Icon(Icons.health_and_safety), text: 'Maladies'),
             ],
@@ -1010,8 +1010,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ),
                           subtitle: Text(
                             nbTraitements == 0
-                                ? 'Aucun traitement'
-                                : '$nbTraitements traitement${nbTraitements > 1 ? 's' : ''}'
+                                ? 'Aucun vermifuge'
+                                : '$nbTraitements vermifuge${nbTraitements > 1 ? 's' : ''}'
                                 '${nbTraitementsEnCours > 0 ? ' ($nbTraitementsEnCours en cours)' : ''}',
                             style: TextStyle(
                               color: nbTraitementsEnCours > 0 ? Colors.orange[700] : Colors.grey[600],
@@ -1636,7 +1636,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return FloatingActionButton.extended(
         onPressed: _ajouterTraitementGroupe,
         icon: const Icon(Icons.medication),
-        label: Text('Traiter ${_selectedAnimaux.length} animaux'),
+        label: Text('Vermifuger ${_selectedAnimaux.length} animaux'),
       );
     }
 
@@ -1721,7 +1721,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextFormField(
-                    decoration: const InputDecoration(labelText: 'Nom du traitement'),
+                    decoration: const InputDecoration(labelText: 'Nom du vermifuge'),
                     validator: (value) => value?.isEmpty ?? true ? 'Requis' : null,
                     onSaved: (value) => nom = value!,
                   ),
@@ -1827,7 +1827,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Traitement ajouté à ${_selectedAnimaux.length} animaux'),
+            content: Text('Vermifuge ajouté à ${_selectedAnimaux.length} animaux'),
             backgroundColor: Colors.green,
           ),
         );

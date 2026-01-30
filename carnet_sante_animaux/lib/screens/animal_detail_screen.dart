@@ -107,7 +107,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen>
           controller: _tabController,
           tabs: [
             const Tab(text: 'Infos', icon: Icon(Icons.info)),
-            const Tab(text: 'Traitements', icon: Icon(Icons.medication)),
+            const Tab(text: 'Vermifuges', icon: Icon(Icons.medication)),
             const Tab(text: 'Vaccins', icon: Icon(Icons.vaccines)),
             const Tab(text: 'Consultations', icon: Icon(Icons.medical_services)),
             if (_animal.afficherOngletPoids)

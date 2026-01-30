@@ -75,7 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: Text(
               'Les notifications sont planifiées automatiquement lors de l\'ajout ou modification de:\n'
               '• Vaccins (rappels 3 jours avant et le jour J)\n'
-              '• Traitements (rappel le jour de fin)\n'
+              '• Vermifuges (rappel le jour de fin)\n'
               '• Pesées pour bébés (rappel hebdomadaire)',
             ),
             isThreeLine: true,
@@ -86,7 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Horaires des notifications'),
             subtitle: const Text(
               'Vaccins: 9h00\n'
-              'Traitements: 10h00\n'
+              'Vermifuges: 10h00\n'
               'Pesées: 10h00',
             ),
             isThreeLine: true,

@@ -46,7 +46,7 @@ class _AnimalTraitementsScreenState extends State<AnimalTraitementsScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Ajouter un traitement'),
+        title: const Text('Ajouter un vermifuge'),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -54,7 +54,7 @@ class _AnimalTraitementsScreenState extends State<AnimalTraitementsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextFormField(
-                  decoration: const InputDecoration(labelText: 'Nom du traitement'),
+                  decoration: const InputDecoration(labelText: 'Nom du vermifuge'),
                   validator: (value) => value?.isEmpty ?? true ? 'Requis' : null,
                   onSaved: (value) => nom = value!,
                 ),
@@ -154,7 +154,7 @@ class _AnimalTraitementsScreenState extends State<AnimalTraitementsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Traitements - ${_animal.nom}'),
+        title: Text('Vermifuges - ${_animal.nom}'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: _isLoading
@@ -220,7 +220,7 @@ class _AnimalTraitementsScreenState extends State<AnimalTraitementsScreen> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'Aucun traitement',
+                                'Aucun vermifuge',
                                 style: TextStyle(
                                   fontSize: 18,
                                   color: Colors.grey[600],
